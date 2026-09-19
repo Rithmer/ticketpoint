@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ticketpoint}
+      POSTGRES_USER: ${POSTGRES_USER:-ticketpoint}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD в .env}
+      TZ: ${APP_ZONE:-Europe/Moscow}
+      PGTZ: ${APP_ZONE:-Europe/Moscow}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - ticketpoint_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+  ticketpoint:
+    profiles: ["production"]
+    build: .
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ticketpoint}
+      DB_USER: ${DB_USER:-ticketpoint}
+      DB_PASSWORD: ${DB_PASSWORD:?Задайте DB_PASSWORD в .env}
+      APP_ZONE: ${APP_ZONE:-Europe/Moscow}
+      DB_CONNECT_TIMEOUT_SECONDS: ${DB_CONNECT_TIMEOUT_SECONDS:-5}
+      DB_STATEMENT_TIMEOUT_SECONDS: ${DB_STATEMENT_TIMEOUT_SECONDS:-15}
+      DB_SOCKET_TIMEOUT_SECONDS: ${DB_SOCKET_TIMEOUT_SECONDS:-30}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+    volumes:
+      - ticketpoint_logs:/app/logs
+      - ticketpoint_exports:/app/exports
+volumes:
+  ticketpoint_data:
+  ticketpoint_logs:
+  ticketpoint_exports:
