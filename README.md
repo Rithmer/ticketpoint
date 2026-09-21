@@ -35,6 +35,7 @@ Maven устанавливать отдельно не нужно: в репоз
 
 ```bash
 cp .env.example .env
+# Заполните POSTGRES_PASSWORD в .env перед запуском.
 docker compose up -d --wait
 ./mvnw clean package -DskipTests
 set -a
@@ -43,7 +44,9 @@ set +a
 java -jar target/ticketpoint-1.0-SNAPSHOT.jar
 ```
 
-На Windows переменные окружения задаются в PowerShell или конфигурации запуска IDE. При первом запуске PostgreSQL применяет `db/schema.sql` и `db/seed.sql`.
+В `.env` переменные `DB_USER` и `DB_PASSWORD` ссылаются на `POSTGRES_USER` и `POSTGRES_PASSWORD`, поэтому имя и пароль вводятся один раз. На Windows задайте эти значения в PowerShell или конфигурации запуска IDE. При первом запуске PostgreSQL создаёт роль `POSTGRES_USER` и применяет `db/schema.sql` и `db/seed.sql`.
+
+Если база уже создана, изменение `POSTGRES_USER` или `POSTGRES_PASSWORD` в `.env` не меняет роль и пароль в существующем томе. Укажите в `.env` фактического пользователя базы и его действующий пароль. В текущей конфигурации это `ticketpoint`; после смены пароля через `\password ticketpoint` запишите новый пароль в `POSTGRES_PASSWORD`. Удалять том не требуется.
 
 ## Командная строка
 
@@ -60,7 +63,7 @@ java -jar target/ticketpoint-1.0-SNAPSHOT.jar --export exports/bookings.xlsx
 | Переменная                     | Значение по умолчанию                          | Назначение                            |
 |--------------------------------|------------------------------------------------|---------------------------------------|
 | `DB_URL`                       | `jdbc:postgresql://localhost:5432/ticketpoint` | JDBC URL PostgreSQL                   |
-| `DB_USER`                      | `ticketpoint_admin`                            | Пользователь БД                       |
+| `DB_USER`                      | `ticketpoint`                                  | Пользователь БД                       |
 | `DB_PASSWORD`                  | отсутствует                                    | Пароль пользователя БД                |
 | `APP_ZONE`                     | `Europe/Moscow`                                | Часовой пояс приложения и JDBC-сессий |
 | `DB_CONNECT_TIMEOUT_SECONDS`   | `5`                                            | Тайм-аут подключения                  |

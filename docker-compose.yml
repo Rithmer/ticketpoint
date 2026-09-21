@@ -23,8 +23,8 @@ services:
     build: .
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ticketpoint}
-      DB_USER: ${DB_USER:-ticketpoint}
-      DB_PASSWORD: ${DB_PASSWORD:?Задайте DB_PASSWORD в .env}
+      DB_USER: ${POSTGRES_USER:-ticketpoint}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD в .env}
       APP_ZONE: ${APP_ZONE:-Europe/Moscow}
       DB_CONNECT_TIMEOUT_SECONDS: ${DB_CONNECT_TIMEOUT_SECONDS:-5}
       DB_STATEMENT_TIMEOUT_SECONDS: ${DB_STATEMENT_TIMEOUT_SECONDS:-15}

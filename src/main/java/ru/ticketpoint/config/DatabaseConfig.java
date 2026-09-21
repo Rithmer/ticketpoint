@@ -15,7 +15,7 @@ public record DatabaseConfig(String url, String user, String password, ZoneId zo
         if (user == null || user.isBlank()) {
             throw new IllegalArgumentException("DB_USER не должен быть пустым");
         }
-        if (password == null || password.isBlank() || "change_me".equalsIgnoreCase(password)) {
+        if (password == null || password.isBlank()) {
             throw new IllegalArgumentException("DB_PASSWORD обязателен и не должен быть пустым");
         }
         Objects.requireNonNull(zone, "APP_ZONE обязателен");
