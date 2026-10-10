@@ -46,7 +46,7 @@ class ExcelExporterTest {
             assertEquals(5100.0, row.getCell(7).getNumericCellValue());
             assertEquals("0.00", row.getCell(7).getCellStyle().getDataFormatString());
             assertTrue(DateUtil.isCellDateFormatted(row.getCell(6)));
-            assertEquals(event.getStartsAt(), row.getCell(6).getLocalDateTimeCellValue());
+            assertEquals(event.startsAt(), row.getCell(6).getLocalDateTimeCellValue());
             for (var cell : row) {
                 assertNotEquals(CellType.FORMULA, cell.getCellType());
             }

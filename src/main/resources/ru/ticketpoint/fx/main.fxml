@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.MainController" styleClass="app-root">
+    <top>
+        <VBox spacing="5" styleClass="masthead">
+            <Label text="TicketPoint" styleClass="brand"/>
+        </VBox>
+    </top>
+    <center>
+        <VBox fx:id="workspace" spacing="12">
+            <padding><Insets top="12" right="18" bottom="10" left="18"/></padding>
+            <TabPane id="tabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+                <Tab fx:id="bookingsTab" text="Бронирования"/>
+                <Tab fx:id="referencesTab" text="Клиенты и мероприятия"/>
+                <Tab fx:id="statisticsTab" text="Статистика"/>
+            </TabPane>
+        </VBox>
+    </center>
+    <bottom>
+        <HBox fx:id="statusBar" spacing="12" alignment="CENTER_LEFT" styleClass="status-bar">
+            <ProgressIndicator fx:id="progress" prefWidth="20" prefHeight="20" visible="false"/>
+            <Label fx:id="operationStatus" text="Подключение к базе данных…" wrapText="true"/>
+        </HBox>
+    </bottom>
+</BorderPane>

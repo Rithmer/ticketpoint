@@ -25,68 +25,13 @@ public final class ExcelBookingExporter implements BookingExporter {
 
     @Override
     public void export(List<Booking> bookings, Path target) throws IOException {
-        List<Booking> snapshot = List.copyOf(bookings);
-        if (snapshot.size() >= SpreadsheetVersion.EXCEL2007.getMaxRows()) {
-            throw new IllegalArgumentException("Слишком много бронирований для одного листа Excel");
-        }
-        for (Booking booking : snapshot) {
-            int year = booking.getEvent().getStartsAt().getYear();
-            if (year < 1900 || year > 9999) {
-                throw new IllegalArgumentException("Дата мероприятия для Excel должна быть в диапазоне 1900–9999 годов");
-            }
-        }
+        List<Booking> snapshot = validatedSnapshot(bookings);
         Path destination = target.toAbsolutePath();
         Files.createDirectories(destination.getParent());
         Path temporary = Files.createTempFile(destination.getParent(), ".bookings-", ".xlsx");
         Throwable failure = null;
         try {
-            try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-                XSSFSheet sheet = workbook.createSheet("Бронирования");
-                CellStyle text = textStyle(workbook);
-                CellStyle header = headerStyle(workbook, text);
-                CellStyle price = workbook.createCellStyle();
-                price.cloneStyleFrom(text);
-                price.setDataFormat(workbook.createDataFormat().getFormat("0.00"));
-                CellStyle date = workbook.createCellStyle();
-                date.cloneStyleFrom(text);
-                date.setDataFormat(workbook.createDataFormat().getFormat("dd.mm.yyyy hh:mm"));
-
-                var headings = sheet.createRow(0);
-                headings.setHeightInPoints(32);
-                for (int column = 0; column < HEADINGS.size(); column++) {
-                    var cell = headings.createCell(column);
-                    cell.setCellValue(HEADINGS.get(column));
-                    cell.setCellStyle(header);
-                    sheet.setColumnWidth(column, WIDTHS[column] * 256);
-                }
-                int rowIndex = 1;
-                for (Booking booking : snapshot) {
-                    var row = sheet.createRow(rowIndex++);
-                    row.setHeightInPoints(38);
-                    String[] values = {String.valueOf(booking.getId()), booking.getTicketNumber(),
-                            booking.getCustomer().getCustomerCode(), booking.getCustomer().getName(),
-                            booking.getEvent().getTitle(), booking.getEvent().getVenue()};
-                    for (int column = 0; column < values.length; column++) {
-                        var cell = row.createCell(column);
-                        cell.setCellValue(values[column]);
-                        cell.setCellStyle(text);
-                    }
-                    var dateCell = row.createCell(6);
-                    dateCell.setCellValue(booking.getEvent().getStartsAt());
-                    dateCell.setCellStyle(date);
-                    var priceCell = row.createCell(7);
-                    priceCell.setCellValue(booking.getPriceAtBooking().doubleValue());
-                    priceCell.setCellStyle(price);
-                    var statusCell = row.createCell(8);
-                    statusCell.setCellValue(booking.getStatus().name());
-                    statusCell.setCellStyle(text);
-                }
-                sheet.createFreezePane(0, 1);
-                sheet.setAutoFilter(new CellRangeAddress(0, rowIndex - 1, 0, HEADINGS.size() - 1));
-                try (var output = Files.newOutputStream(temporary)) {
-                    workbook.write(output);
-                }
-            }
+            writeWorkbook(snapshot, temporary);
             try {
                 Files.move(temporary, destination, StandardCopyOption.ATOMIC_MOVE,
                         StandardCopyOption.REPLACE_EXISTING);
@@ -105,6 +50,70 @@ public final class ExcelBookingExporter implements BookingExporter {
                 } else {
                     throw cleanupError;
                 }
+            }
+        }
+    }
+
+    private static List<Booking> validatedSnapshot(List<Booking> bookings) {
+        List<Booking> snapshot = List.copyOf(bookings);
+        if (snapshot.size() >= SpreadsheetVersion.EXCEL2007.getMaxRows()) {
+            throw new IllegalArgumentException("Слишком много бронирований для одного листа Excel");
+        }
+        for (Booking booking : snapshot) {
+            int year = booking.event().startsAt().getYear();
+            if (year < 1900 || year > 9999) {
+                throw new IllegalArgumentException("Дата мероприятия для Excel должна быть в диапазоне 1900–9999 годов");
+            }
+        }
+        return snapshot;
+    }
+
+    private static void writeWorkbook(List<Booking> bookings, Path target) throws IOException {
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            XSSFSheet sheet = workbook.createSheet("Бронирования");
+            CellStyle text = textStyle(workbook);
+            CellStyle header = headerStyle(workbook, text);
+            CellStyle price = workbook.createCellStyle();
+            price.cloneStyleFrom(text);
+            price.setDataFormat(workbook.createDataFormat().getFormat("0.00"));
+            CellStyle date = workbook.createCellStyle();
+            date.cloneStyleFrom(text);
+            date.setDataFormat(workbook.createDataFormat().getFormat("dd.mm.yyyy hh:mm"));
+
+            var headings = sheet.createRow(0);
+            headings.setHeightInPoints(32);
+            for (int column = 0; column < HEADINGS.size(); column++) {
+                var cell = headings.createCell(column);
+                cell.setCellValue(HEADINGS.get(column));
+                cell.setCellStyle(header);
+                sheet.setColumnWidth(column, WIDTHS[column] * 256);
+            }
+            int rowIndex = 1;
+            for (Booking booking : bookings) {
+                var row = sheet.createRow(rowIndex++);
+                row.setHeightInPoints(38);
+                String[] values = {String.valueOf(booking.id()), booking.ticketNumber(),
+                        booking.customer().customerCode(), booking.customer().name(),
+                        booking.event().title(), booking.event().venue()};
+                for (int column = 0; column < values.length; column++) {
+                    var cell = row.createCell(column);
+                    cell.setCellValue(values[column]);
+                    cell.setCellStyle(text);
+                }
+                var dateCell = row.createCell(6);
+                dateCell.setCellValue(booking.event().startsAt());
+                dateCell.setCellStyle(date);
+                var priceCell = row.createCell(7);
+                priceCell.setCellValue(booking.priceAtBooking().doubleValue());
+                priceCell.setCellStyle(price);
+                var statusCell = row.createCell(8);
+                statusCell.setCellValue(booking.status().name());
+                statusCell.setCellStyle(text);
+            }
+            sheet.createFreezePane(0, 1);
+            sheet.setAutoFilter(new CellRangeAddress(0, rowIndex - 1, 0, HEADINGS.size() - 1));
+            try (var output = Files.newOutputStream(target)) {
+                workbook.write(output);
             }
         }
     }

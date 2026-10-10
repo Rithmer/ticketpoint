@@ -49,17 +49,17 @@ final class ConsoleInput {
         }
     }
 
-    LocalDateTime readDateTime(String prompt) {
+    LocalDateTime readDateTime() {
         try {
-            return LocalDateTime.parse(read(prompt), DATE_TIME);
+            return LocalDateTime.parse(read("Дата и время (дд.ММ.гггг чч:мм): "), DATE_TIME);
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("Некорректная дата. Пример: 25.12.2030 19:30", e);
         }
     }
 
-    BigDecimal readPrice(String prompt) {
+    BigDecimal readPrice() {
         try {
-            return new BigDecimal(read(prompt).replace(',', '.'));
+            return new BigDecimal(read("Цена, руб.: ").replace(',', '.'));
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Цена должна быть числом", e);
         }

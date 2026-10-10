@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 public final class Validation {
+    private static final BigDecimal MAX_PRICE = new BigDecimal("9999999999.99");
+
     private Validation() { }
 
     public static String text(String value, String label, int maxLength) {
@@ -32,7 +34,7 @@ public final class Validation {
     }
 
     public static BigDecimal price(BigDecimal price) {
-        if (price == null || price.signum() < 0 || price.compareTo(new BigDecimal("9999999999.99")) > 0) {
+        if (price == null || price.signum() < 0 || price.compareTo(MAX_PRICE) > 0) {
             throw new IllegalArgumentException("Цена должна быть от 0 до 9999999999.99");
         }
         try {

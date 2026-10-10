@@ -4,76 +4,41 @@ import ru.ticketpoint.config.ConnectionProvider;
 import ru.ticketpoint.model.CreateCustomerCommand;
 import ru.ticketpoint.model.Customer;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 public final class JdbcCustomerRepository implements CustomerRepository {
-    private final ConnectionProvider connections;
+    private final JdbcQueries queries;
 
     public JdbcCustomerRepository(ConnectionProvider connections) {
-        this.connections = Objects.requireNonNull(connections);
+        this.queries = new JdbcQueries(connections);
     }
 
     @Override
     public Customer create(CreateCustomerCommand customer, String customerCode) {
         String sql = "INSERT INTO customers(customer_code, name) VALUES (?, ?) "
                 + "RETURNING id, customer_code, name";
-        try (Connection connection = connections.open();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, Customer.normalizeCode(customerCode));
+        String code = Customer.normalizeCode(customerCode);
+        return queries.one(connection -> connection.prepareStatement(sql), statement -> {
+            statement.setString(1, code);
             statement.setString(2, customer.name());
-            try (ResultSet result = statement.executeQuery()) {
-                if (!result.next()) {
-                    throw new SQLException("INSERT клиента не вернул созданную запись");
-                }
-                return map(result);
-            }
-        } catch (SQLException e) {
-            throw SqlExceptionTranslator.translate("Не удалось создать клиента", e);
-        }
+        }, JdbcCustomerRepository::map, "Не удалось создать клиента")
+                .orElseThrow(() -> new IllegalStateException("INSERT клиента не вернул созданную запись"));
     }
 
     @Override
     public List<Customer> findAll() {
-        return query("SELECT id, customer_code, name FROM customers ORDER BY id", null);
+        return queries.list(connection -> connection.prepareStatement("SELECT id, customer_code, name FROM customers ORDER BY id"),
+                JdbcQueries.Parameters.NONE, JdbcCustomerRepository::map, "Не удалось прочитать клиентов");
     }
 
     @Override
     public Optional<Customer> findById(long id) {
         String sql = "SELECT id, customer_code, name FROM customers WHERE id = ?";
-        try (Connection connection = connections.open();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setLong(1, id);
-            try (ResultSet result = statement.executeQuery()) {
-                return result.next() ? Optional.of(map(result)) : Optional.empty();
-            }
-        } catch (SQLException e) {
-            throw SqlExceptionTranslator.translate("Не удалось прочитать клиента", e);
-        }
-    }
-
-    private List<Customer> query(String sql, Long id) {
-        try (Connection connection = connections.open();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            if (id != null) {
-                statement.setLong(1, id);
-            }
-            try (ResultSet result = statement.executeQuery()) {
-                List<Customer> customers = new ArrayList<>();
-                while (result.next()) {
-                    customers.add(map(result));
-                }
-                return List.copyOf(customers);
-            }
-        } catch (SQLException e) {
-            throw SqlExceptionTranslator.translate("Не удалось прочитать клиентов", e);
-        }
+        return queries.one(connection -> connection.prepareStatement(sql), statement -> statement.setLong(1, id),
+                JdbcCustomerRepository::map, "Не удалось прочитать клиента");
     }
 
     private static Customer map(ResultSet result) throws SQLException {

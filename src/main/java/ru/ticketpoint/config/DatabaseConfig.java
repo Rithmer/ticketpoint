@@ -1,6 +1,9 @@
 package ru.ticketpoint.config;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.time.DateTimeException;
+import java.nio.file.Path;
 import java.time.ZoneId;
 import java.util.Map;
 import java.util.Objects;
@@ -16,7 +19,8 @@ public record DatabaseConfig(String url, String user, String password, ZoneId zo
             throw new IllegalArgumentException("DB_USER не должен быть пустым");
         }
         if (password == null || password.isBlank()) {
-            throw new IllegalArgumentException("DB_PASSWORD обязателен и не должен быть пустым");
+            throw new IllegalArgumentException("Не задан пароль базы данных. Заполните DB_PASSWORD в .env "
+                    + "или POSTGRES_PASSWORD, если DB_PASSWORD ссылается на него");
         }
         Objects.requireNonNull(zone, "APP_ZONE обязателен");
         if (!ZoneId.getAvailableZoneIds().contains(zone.getId())) {
@@ -31,7 +35,7 @@ public record DatabaseConfig(String url, String user, String password, ZoneId zo
     }
 
     public static DatabaseConfig fromEnvironment() {
-        return fromEnvironment(System.getenv());
+        return fromEnvironment(EnvironmentFile.read(Path.of(".env"), System.getenv()));
     }
 
     public static DatabaseConfig fromEnvironment(Map<String, String> environment) {
@@ -52,9 +56,7 @@ public record DatabaseConfig(String url, String user, String password, ZoneId zo
 
     private static int timeout(Map<String, String> environment, String name, int fallback) {
         try {
-            int value = Integer.parseInt(environment.getOrDefault(name, Integer.toString(fallback)));
-            validateTimeout(name, value);
-            return value;
+            return Integer.parseInt(environment.getOrDefault(name, Integer.toString(fallback)));
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(name + " должен быть целым числом секунд от 1 до 86400");
         }
@@ -67,7 +69,7 @@ public record DatabaseConfig(String url, String user, String password, ZoneId zo
     }
 
     @Override
-    public String toString() {
+    public @NotNull String toString() {
         return "DatabaseConfig[connection=<hidden>, zone=" + zone + ", connectTimeoutSeconds="
                 + connectTimeoutSeconds + ", statementTimeoutSeconds=" + statementTimeoutSeconds
                 + ", socketTimeoutSeconds=" + socketTimeoutSeconds + "]";

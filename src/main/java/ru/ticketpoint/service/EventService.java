@@ -1,6 +1,5 @@
 package ru.ticketpoint.service;
 
-import ru.ticketpoint.exception.BookingException;
 import ru.ticketpoint.exception.EntityNotFoundException;
 import ru.ticketpoint.model.CreateEventCommand;
 import ru.ticketpoint.model.Event;
@@ -8,7 +7,6 @@ import ru.ticketpoint.model.Validation;
 import ru.ticketpoint.repository.EventRepository;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -23,7 +21,7 @@ public final class EventService {
 
     public Event create(CreateEventCommand event) {
         Objects.requireNonNull(event);
-        validateFuture(event.startsAt());
+        EventSchedule.requireFuture(event.startsAt(), clock);
         return events.create(event);
     }
 
@@ -36,9 +34,4 @@ public final class EventService {
                 .orElseThrow(() -> new EntityNotFoundException("Мероприятие не найдено"));
     }
 
-    private void validateFuture(LocalDateTime startsAt) {
-        if (!startsAt.isAfter(LocalDateTime.now(clock))) {
-            throw new BookingException("Мероприятие должно быть в будущем");
-        }
-    }
 }

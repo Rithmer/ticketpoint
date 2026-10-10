@@ -10,16 +10,19 @@ final class SqlExceptionTranslator {
 
     static RuntimeException translate(String operation, SQLException error) {
         String state = error.getSQLState();
-        if ("23505".equals(state)) {
-            return new BookingException("Код клиента или номер билета уже существует", error);
-        }
-        if ("23503".equals(state) || "23001".equals(state)) {
-            return new BookingException("Связанная запись не существует или используется", error);
-        }
-        if ("23514".equals(state) || "22001".equals(state) || "22003".equals(state)) {
-            return new BookingException("Данные нарушают ограничения базы данных", error);
-        }
-        return new DataAccessException(operation + ". Проверьте подключение и SQL-схему (SQLState: "
-                + state + ")", error);
+        return switch (state) {
+            case "23505" -> new BookingException(
+                    "Код клиента или номер билета уже существует. Повторите создание записи", error);
+            case "23503" -> new BookingException(
+                    "Клиент или мероприятие недоступны либо используются в бронировании. "
+                            + "Обновите список и проверьте выбранные записи", error);
+            case "23001" -> new BookingException(
+                    "Запись используется в бронировании и не может быть удалена", error);
+            case "23514", "22001", "22003" -> new BookingException(
+                    "Не удалось сохранить данные. Проверьте заполнение обязательных полей, "
+                            + "длину текста и цену", error);
+            case null, default -> new DataAccessException(
+                    operation + ". Проверьте подключение и SQL-схему (SQLState: " + state + ")", error);
+        };
     }
 }

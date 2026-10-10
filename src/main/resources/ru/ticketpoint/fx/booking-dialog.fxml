@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.BookingDialogController" spacing="10" prefWidth="550" styleClass="form">
+    <Label text="Клиент"/>
+    <ComboBox fx:id="customer" maxWidth="Infinity" promptText="Выберите клиента"/>
+    <Label text="Мероприятие"/>
+    <ComboBox fx:id="event" maxWidth="Infinity" promptText="Выберите мероприятие"/>
+    <Label text="Цена при бронировании"/>
+    <Label fx:id="price" text="—" styleClass="heading"/>
+    <Label text="Статус"/>
+    <ComboBox fx:id="status" maxWidth="Infinity"/>
+    <Label fx:id="errorLabel" wrapText="true" styleClass="error"/>
+</VBox>

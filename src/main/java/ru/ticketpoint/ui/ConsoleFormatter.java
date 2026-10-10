@@ -14,20 +14,19 @@ public final class ConsoleFormatter {
     public static String format(Object item) {
         if (item instanceof Booking booking) {
             return "Бронь #%s | %s | Клиент #%s: %s [%s] | Мероприятие #%s: %s | %s | %s | %s руб. | %s"
-                    .formatted(booking.getId(), booking.getTicketNumber(), booking.getCustomer().getId(),
-                            booking.getCustomer().getName(), booking.getCustomer().getCustomerCode(),
-                            booking.getEvent().getId(), booking.getEvent().getTitle(),
-                            booking.getEvent().getVenue(),
-                            DATE.format(booking.getEvent().getStartsAt()),
-                            booking.getPriceAtBooking().toPlainString(), booking.getStatus());
+                    .formatted(booking.id(), booking.ticketNumber(), booking.customer().id(),
+                            booking.customer().name(), booking.customer().customerCode(),
+                            booking.event().id(), booking.event().title(),
+                            booking.event().venue(),
+                            DATE.format(booking.event().startsAt()),
+                            booking.priceAtBooking().toPlainString(), booking.status());
         }
-        if (item instanceof Customer customer) {
-            return "Клиент #%s: %s [%s]".formatted(customer.getId(), customer.getName(),
-                    customer.getCustomerCode());
+        if (item instanceof Customer(Long id, String code, String name)) {
+            return "Клиент #%s: %s [%s]".formatted(id, name, code);
         }
-        if (item instanceof Event event) {
-            return "Мероприятие #%s: %s | %s | %s | %s руб.".formatted(event.getId(), event.getTitle(),
-                    event.getVenue(), DATE.format(event.getStartsAt()), event.getPrice().toPlainString());
+        if (item instanceof Event(Long id, String title, String venue, java.time.LocalDateTime startsAt, java.math.BigDecimal price)) {
+            return "Мероприятие #%s: %s | %s | %s | %s руб.".formatted(id, title,
+                    venue, DATE.format(startsAt), price.toPlainString());
         }
         if (item instanceof String text) {
             return text;

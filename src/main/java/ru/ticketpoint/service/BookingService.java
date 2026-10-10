@@ -6,16 +6,12 @@ import ru.ticketpoint.model.Booking;
 import ru.ticketpoint.model.BookingStatistics;
 import ru.ticketpoint.model.BookingStatus;
 import ru.ticketpoint.model.BookingSort;
-import ru.ticketpoint.model.Customer;
 import ru.ticketpoint.model.Event;
 import ru.ticketpoint.model.Validation;
 import ru.ticketpoint.repository.BookingRepository;
-import ru.ticketpoint.repository.CustomerRepository;
-import ru.ticketpoint.repository.EventRepository;
 
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -24,12 +20,12 @@ import java.util.UUID;
 public final class BookingService {
     private static final BigDecimal EXPENSIVE_THRESHOLD = new BigDecimal("5000.00");
     private final BookingRepository bookings;
-    private final CustomerRepository customers;
-    private final EventRepository events;
+    private final CustomerService customers;
+    private final EventService events;
     private final Clock clock;
 
-    public BookingService(BookingRepository bookings, CustomerRepository customers,
-                          EventRepository events, Clock clock) {
+    public BookingService(BookingRepository bookings, CustomerService customers,
+                          EventService events, Clock clock) {
         this.bookings = Objects.requireNonNull(bookings);
         this.customers = Objects.requireNonNull(customers);
         this.events = Objects.requireNonNull(events);
@@ -37,16 +33,16 @@ public final class BookingService {
     }
 
     public Booking createBooking(long customerId, long eventId) {
-        customer(customerId);
-        Event event = event(eventId);
-        if (!event.getStartsAt().isAfter(LocalDateTime.now(clock))) {
-            throw new BookingException("Мероприятие должно быть в будущем");
-        }
+        customers.findById(customerId);
+        Event event = events.findById(eventId);
+        EventSchedule.requireFuture(event.startsAt(), clock);
         String number = "TP-" + UUID.randomUUID().toString().toUpperCase(Locale.ROOT);
         return bookings.create(customerId, eventId, number);
     }
 
-    public List<Booking> findAll() { return bookings.findAll(); }
+    public List<Booking> findAll() {
+        return bookings.findAll();
+    }
 
     public Booking findById(long id) {
         return bookings.findById(Validation.id(id))
@@ -66,9 +62,9 @@ public final class BookingService {
 
     public Booking changeStatus(long id, BookingStatus next) {
         Booking current = findById(id);
-        BookingStatus expected = current.getStatus();
-        current.changeStatus(next);
-        return bookings.updateStatus(id, expected, current.getStatus());
+        BookingStatus expected = current.status();
+        expected.validateTransitionTo(next);
+        return bookings.updateStatus(id, expected, next);
     }
 
     public void delete(long id) {
@@ -85,7 +81,7 @@ public final class BookingService {
     }
 
     public List<Booking> filterByCustomer(long id) {
-        customer(id);
+        customers.findById(id);
         return bookings.findByCustomerId(id);
     }
 
@@ -101,13 +97,4 @@ public final class BookingService {
         return bookings.statistics(EXPENSIVE_THRESHOLD);
     }
 
-    private Customer customer(long id) {
-        return customers.findById(Validation.id(id))
-                .orElseThrow(() -> new EntityNotFoundException("Клиент не найден"));
-    }
-
-    private Event event(long id) {
-        return events.findById(Validation.id(id))
-                .orElseThrow(() -> new EntityNotFoundException("Мероприятие не найдено"));
-    }
 }

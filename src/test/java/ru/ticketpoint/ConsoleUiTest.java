@@ -72,8 +72,8 @@ class ConsoleUiTest {
         var eventRepository = new JdbcEventRepository(provider);
         CustomerService customers = new CustomerService(customerRepository);
         EventService events = new EventService(eventRepository, Clock.systemUTC());
-        BookingService bookings = new BookingService(new JdbcBookingRepository(provider), customerRepository,
-                eventRepository, Clock.systemUTC());
+        BookingService bookings = new BookingService(new JdbcBookingRepository(provider), customers,
+                events, Clock.systemUTC());
         DatabaseMetadataService metadata = new DatabaseMetadataService(
                 new JdbcDatabaseMetadataRepository(provider));
         StringWriter text = new StringWriter();

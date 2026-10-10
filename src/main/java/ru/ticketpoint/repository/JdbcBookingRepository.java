@@ -16,7 +16,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -24,16 +23,18 @@ import java.util.Optional;
 public final class JdbcBookingRepository implements BookingRepository {
     private static final String SELECT_BASE = """
             SELECT b.id booking_id, b.ticket_number, b.price_at_booking, b.status, b.created_at,
-                   c.id customer_id, c.customer_code, c.name customer_name,
-                   e.id event_id, e.title, e.venue, e.starts_at, e.price
+                   c.id AS customer_record_id, c.customer_code, c.name customer_name,
+                   e.id AS event_record_id, e.title, e.venue, e.starts_at, e.price
             FROM bookings b
             JOIN customers c ON c.id = b.customer_id
             JOIN events e ON e.id = b.event_id
             """;
     private final ConnectionProvider connections;
+    private final JdbcQueries queries;
 
     public JdbcBookingRepository(ConnectionProvider connections) {
         this.connections = Objects.requireNonNull(connections);
+        this.queries = new JdbcQueries(connections);
     }
 
     @Override
@@ -51,7 +52,7 @@ public final class JdbcBookingRepository implements BookingRepository {
                 statement.setLong(3, eventId);
                 try (ResultSet result = statement.executeQuery()) {
                     if (!result.next()) {
-                        throw new BookingException("Мероприятие отсутствует или уже началось");
+                        throw new BookingException("Мероприятие удалено или уже началось. Обновите список и выберите другое");
                     }
                     id = result.getLong(1);
                 }
@@ -68,37 +69,44 @@ public final class JdbcBookingRepository implements BookingRepository {
 
     @Override
     public List<Booking> findByEventTitle(String title) {
-        return query(SELECT_BASE + " WHERE lower(e.title) LIKE '%' || lower(?) || '%'", title);
+        return query(connection -> connection.prepareStatement(SELECT_BASE + " WHERE strpos(lower(e.title), lower(?)) > 0"),
+                statement -> statement.setString(1, title));
     }
 
     @Override
     public List<Booking> findByStatus(BookingStatus status) {
-        return query(SELECT_BASE + " WHERE b.status = ?::booking_status", status.name());
+        return query(connection -> connection.prepareStatement(SELECT_BASE + " WHERE b.status = ?::booking_status"),
+                statement -> statement.setString(1, status.name()));
     }
 
     @Override
     public List<Booking> findByCustomerId(long customerId) {
-        return query(SELECT_BASE + " WHERE b.customer_id = ?", customerId);
+        return query(connection -> connection.prepareStatement(SELECT_BASE + " WHERE b.customer_id = ?"),
+                statement -> statement.setLong(1, customerId));
     }
 
     @Override
     public List<Booking> findAll(BookingSort sort) {
         Objects.requireNonNull(sort);
-        String order = switch (sort) {
-            case CREATED_AT_DESC -> " ORDER BY b.created_at DESC, b.id";
-            case EVENT_DATE_ASC -> " ORDER BY e.starts_at, b.id";
+        JdbcQueries.StatementFactory factory = switch (sort) {
+            case CREATED_AT_DESC -> connection -> connection.prepareStatement(
+                    SELECT_BASE + " ORDER BY b.created_at DESC, b.id");
+            case EVENT_DATE_ASC -> connection -> connection.prepareStatement(
+                    SELECT_BASE + " ORDER BY e.starts_at, b.id");
         };
-        return query(SELECT_BASE + order, null);
+        return query(factory, JdbcQueries.Parameters.NONE);
     }
 
     @Override
     public Optional<Booking> findById(long id) {
-        return queryOne(SELECT_BASE + " WHERE b.id = ?", id);
+        return queries.one(connection -> connection.prepareStatement(SELECT_BASE + " WHERE b.id = ?"), statement -> statement.setLong(1, id),
+                JdbcBookingRepository::map, "Не удалось прочитать бронирование");
     }
 
     @Override
     public Optional<Booking> findByTicketNumber(String number) {
-        return queryOne(SELECT_BASE + " WHERE b.ticket_number = ?", number);
+        return queries.one(connection -> connection.prepareStatement(SELECT_BASE + " WHERE b.ticket_number = ?"), statement -> statement.setString(1, number),
+                JdbcBookingRepository::map, "Не удалось прочитать бронирование");
     }
 
     @Override
@@ -115,7 +123,8 @@ public final class JdbcBookingRepository implements BookingRepository {
                     if (findById(connection, id).isEmpty()) {
                         throw new EntityNotFoundException("Бронирование не найдено");
                     }
-                    throw new BookingException("Бронирование уже изменено другим пользователем. Повторите операцию");
+                    throw new BookingException("Бронирование уже изменено другим пользователем. "
+                            + "Закройте форму, обновите список и повторите изменение");
                 }
             }
             return findById(connection, id)
@@ -160,34 +169,8 @@ public final class JdbcBookingRepository implements BookingRepository {
         }
     }
 
-    private List<Booking> query(String sql, Object value) {
-        try (Connection connection = connections.open();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            if (value != null) {
-                statement.setObject(1, value);
-            }
-            try (ResultSet result = statement.executeQuery()) {
-                List<Booking> bookings = new ArrayList<>();
-                while (result.next()) {
-                    bookings.add(map(result));
-                }
-                return List.copyOf(bookings);
-            }
-        } catch (SQLException e) {
-            throw SqlExceptionTranslator.translate("Не удалось прочитать бронирования", e);
-        }
-    }
-
-    private Optional<Booking> queryOne(String sql, Object value) {
-        try (Connection connection = connections.open();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setObject(1, value);
-            try (ResultSet result = statement.executeQuery()) {
-                return result.next() ? Optional.of(map(result)) : Optional.empty();
-            }
-        } catch (SQLException e) {
-            throw SqlExceptionTranslator.translate("Не удалось прочитать бронирование", e);
-        }
+    private List<Booking> query(JdbcQueries.StatementFactory factory, JdbcQueries.Parameters parameters) {
+        return queries.list(factory, parameters, JdbcBookingRepository::map, "Не удалось прочитать бронирования");
     }
 
     private Optional<Booking> findById(Connection connection, long id) throws SQLException {
@@ -220,9 +203,9 @@ public final class JdbcBookingRepository implements BookingRepository {
     }
 
     private static Booking map(ResultSet result) throws SQLException {
-        Customer customer = new Customer(result.getLong("customer_id"), result.getString("customer_code"),
+        Customer customer = new Customer(result.getLong("customer_record_id"), result.getString("customer_code"),
                 result.getString("customer_name"));
-        Event event = new Event(result.getLong("event_id"), result.getString("title"),
+        Event event = new Event(result.getLong("event_record_id"), result.getString("title"),
                 result.getString("venue"), result.getObject("starts_at", LocalDateTime.class),
                 result.getBigDecimal("price"));
         return new Booking(result.getLong("booking_id"), result.getString("ticket_number"), customer, event,

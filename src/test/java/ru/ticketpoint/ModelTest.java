@@ -26,8 +26,8 @@ class ModelTest {
     @Test
     void keepsValidPriceAndAllowsReadingHistoricalEvent() {
         Event event = event("12.340");
-        assertEquals(new BigDecimal("12.34"), event.getPrice());
-        assertTrue(event.getStartsAt().isBefore(LocalDateTime.now()));
+        assertEquals(new BigDecimal("12.34"), event.price());
+        assertTrue(event.startsAt().isBefore(LocalDateTime.now()));
     }
 
     @Test
@@ -45,7 +45,7 @@ class ModelTest {
         try {
             Locale.setDefault(Locale.forLanguageTag("tr-TR"));
             assertEquals(CUSTOMER_CODE, new Customer(null, " " + CUSTOMER_CODE.toLowerCase() + " ", "Иван")
-                    .getCustomerCode());
+                    .customerCode());
         } finally {
             Locale.setDefault(original);
         }
@@ -65,14 +65,28 @@ class ModelTest {
     void validatesEveryStatusTransition() {
         for (BookingStatus from : BookingStatus.values()) {
             for (BookingStatus to : BookingStatus.values()) {
-                if (from == BookingStatus.CANCELLED || from == BookingStatus.PAID && to == BookingStatus.NEW) {
+                boolean allowed = from != BookingStatus.CANCELLED && !(from == BookingStatus.PAID && to == BookingStatus.NEW);
+                assertEquals(allowed, from.canTransitionTo(to));
+                assertEquals(allowed, from.allowedTransitions().contains(to));
+                if (!allowed) {
                     assertThrows(BookingException.class, () -> from.validateTransitionTo(to));
                 } else {
                     assertDoesNotThrow(() -> from.validateTransitionTo(to));
                 }
             }
+            assertFalse(from.canTransitionTo(null));
             assertThrows(BookingException.class, () -> from.validateTransitionTo(null));
         }
+    }
+
+    @Test
+    void recordValuesCompareAfterNormalization() {
+        Customer first = new Customer(1L, CUSTOMER_CODE.toLowerCase(Locale.ROOT), " Иван ");
+        Customer second = new Customer(1L, CUSTOMER_CODE, "Иван");
+        assertEquals(first, second);
+        assertEquals(first.hashCode(), second.hashCode());
+        assertNotEquals(new Customer(2L, CUSTOMER_CODE, "Иван"), first);
+        assertEquals(event("12.340"), event("12.34"));
     }
 
     private Event event(String price) {

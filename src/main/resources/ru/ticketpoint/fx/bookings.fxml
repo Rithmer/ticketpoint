@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.BookingsController" spacing="8" styleClass="tab-content">
+                            <Label text="Бронирования" styleClass="heading"/>
+                            <TextField fx:id="searchField" promptText="Поиск: номер билета, имя или код клиента, мероприятие, место"/>
+                            <HBox spacing="10">
+                                <ComboBox fx:id="statusFilter" promptText="Все статусы" minWidth="155" prefWidth="155"/>
+                                <ComboBox fx:id="customerFilter" promptText="Все клиенты" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                                <ComboBox fx:id="eventFilter" promptText="Все мероприятия" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                            </HBox>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Label text="Дата мероприятия:"/>
+                                <DatePicker fx:id="dateFrom" promptText="С" editable="false" prefWidth="150"/>
+                                <Label text="—"/>
+                                <DatePicker fx:id="dateTo" promptText="По" editable="false" prefWidth="150"/>
+                                <Button text="Сбросить фильтры" onAction="#resetFilters"/>
+                            </HBox>
+                            <Label fx:id="filterError" styleClass="error" wrapText="true"/>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Button text="+ Новое бронирование" onAction="#addBooking" styleClass="primary"/>
+                                <Button fx:id="editButton" text="Редактировать" onAction="#editBooking" disable="true"/>
+                                <Button text="Обновить" onAction="#refreshBookings"/>
+                                <Button fx:id="deleteButton" text="Удалить" onAction="#deleteBooking" styleClass="danger" disable="true"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Button text="Экспорт Excel" onAction="#exportBookings"/>
+                            </HBox>
+                            <Label fx:id="resultCount" text="Показано 0 из 0"/>
+                            <TableView fx:id="bookingTable" VBox.vgrow="ALWAYS"/>
+                        </VBox>

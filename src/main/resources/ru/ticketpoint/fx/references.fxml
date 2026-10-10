@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.ReferencesController" spacing="12" styleClass="tab-content">
+    <HBox alignment="CENTER_LEFT" spacing="12"><Label text="Клиенты" styleClass="heading"/><Region HBox.hgrow="ALWAYS"/><Button text="+ Новый клиент" onAction="#addCustomer" styleClass="primary"/></HBox>
+    <TableView fx:id="customerTable" VBox.vgrow="ALWAYS"/>
+    <HBox alignment="CENTER_LEFT" spacing="12"><Label text="Мероприятия" styleClass="heading"/><Region HBox.hgrow="ALWAYS"/><Button text="+ Новое мероприятие" onAction="#addEvent" styleClass="primary"/></HBox>
+    <TableView fx:id="eventTable" VBox.vgrow="ALWAYS"/>
+</VBox>

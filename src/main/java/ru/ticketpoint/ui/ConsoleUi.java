@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.Scanner;
 
 public final class ConsoleUi {
+    private static final DateTimeFormatter EXPORT_TIMESTAMP = DateTimeFormatter.ofPattern("uuuuMMdd-HHmmss-SSS");
     private final ConsoleInput input;
     private final PrintWriter output;
     private final BookingService bookings;
@@ -155,19 +156,20 @@ public final class ConsoleUi {
     private void createEvent() {
         String title = input.read("Название: ");
         String venue = input.read("Место проведения: ");
-        LocalDateTime date = input.readDateTime("Дата и время (дд.ММ.гггг чч:мм): ");
+        LocalDateTime date = input.readDateTime();
         printItem(events.create(new CreateEventCommand(title, venue, date,
-                input.readPrice("Цена, руб.: "))));
+                input.readPrice())));
     }
 
     private void statistics() {
-        var s = bookings.statistics();
+        var statistics = bookings.statistics();
         output.printf("Всего бронирований: %d%nНовых: %d%nОплаченных: %d%nОтменённых: %d%nБилетов от 5000 руб.: %d%n",
-                s.total(), s.newBookings(), s.paid(), s.cancelled(), s.expensiveTickets());
+                statistics.total(), statistics.newBookings(), statistics.paid(), statistics.cancelled(),
+                statistics.expensiveTickets());
     }
 
     private void export() throws IOException {
-        String name = "bookings-" + DateTimeFormatter.ofPattern("uuuuMMdd-HHmmss-SSS").format(LocalDateTime.now(clock)) + ".xlsx";
+        String name = "bookings-" + EXPORT_TIMESTAMP.format(LocalDateTime.now(clock)) + ".xlsx";
         Path path = Path.of("exports", name);
         exporter.export(bookings.findAll(), path);
         output.println("Экспорт сохранён: " + path.toAbsolutePath());
@@ -206,9 +208,13 @@ public final class ConsoleUi {
         }
     }
 
-    private void printItem(Object item) { output.println(ConsoleFormatter.format(item)); }
+    private void printItem(Object item) {
+        output.println(ConsoleFormatter.format(item));
+    }
 
-    private void unknown() { output.println("Неизвестный пункт меню."); }
+    private void unknown() {
+        output.println("Неизвестный пункт меню.");
+    }
 
     @FunctionalInterface
     private interface Action {

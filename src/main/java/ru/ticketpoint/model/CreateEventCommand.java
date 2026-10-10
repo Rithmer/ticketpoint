@@ -8,7 +8,7 @@ public record CreateEventCommand(String title, String venue, LocalDateTime start
     public CreateEventCommand {
         title = Validation.text(title, "Название мероприятия", 200);
         venue = Validation.text(venue, "Место проведения", 200);
-        startsAt = Objects.requireNonNull(startsAt, "Дата мероприятия обязательна");
+        Objects.requireNonNull(startsAt, "Дата мероприятия обязательна");
         price = Validation.price(price);
     }
 }
