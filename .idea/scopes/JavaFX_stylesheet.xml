@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="JavaFX stylesheet" pattern="file:src/main/resources/ru/ticketpoint/fx/ticketpoint.css" />
+</component>

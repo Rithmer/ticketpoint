@@ -1,5 +1,13 @@
 ### IntelliJ IDEA ###
-.idea/
+.idea/*
+!.idea/dictionaries/
+!.idea/dictionaries/**
+!.idea/inspectionProfiles/
+!.idea/inspectionProfiles/**
+!.idea/scopes/
+!.idea/scopes/**
+!.idea/sqlDataSources.xml
+!.idea/sqldialects.xml
 *.iml
 out/
 !**/src/main/**/out/

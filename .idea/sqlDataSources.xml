@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDataSourceStorage">
+    <option name="dataSources">
+      <list>
+        <State>
+          <option name="id" value="2d05b800-5bfc-4522-86c4-0008c919c343" />
+          <option name="name" value="TicketPoint schema" />
+          <option name="dbmsName" value="POSTGRES" />
+          <option name="urls">
+            <array>
+              <option value="file://$PROJECT_DIR$/db/schema.sql" />
+            </array>
+          </option>
+          <option name="outLayout" value="File per object by schema.groovy" />
+          <option name="autoSync" value="false" />
+        </State>
+      </list>
+    </option>
+  </component>
+</project>
