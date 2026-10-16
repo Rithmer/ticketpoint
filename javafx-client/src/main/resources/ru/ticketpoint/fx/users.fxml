@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.UsersController" fx:id="workspace" spacing="12" styleClass="tab-content">
+    <Label text="Пользователи и доступ" styleClass="heading"/>
+    <HBox spacing="10">
+        <Button text="+ Новый пользователь" onAction="#addUser" styleClass="primary"/>
+        <Button fx:id="editButton" text="Изменить имя и роль" onAction="#editUser" disable="true"/>
+        <Button fx:id="accessButton" text="Отключить доступ" onAction="#toggleAccess" disable="true"/>
+        <Button text="Обновить" onAction="#refresh"/>
+    </HBox>
+    <TableView fx:id="table" VBox.vgrow="ALWAYS"/>
+    <HBox spacing="10"><ProgressIndicator fx:id="progress" visible="false" prefWidth="20" prefHeight="20"/><Label fx:id="feedback" wrapText="true"/></HBox>
+</VBox>

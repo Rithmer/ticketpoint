@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.EventDialogController" spacing="10"
+      prefWidth="480" styleClass="form">
+    <Label text="Название"/>
+    <TextField fx:id="name"/>
+    <VBox spacing="10">
+        <Label text="Место проведения"/>
+        <TextField fx:id="venue"/>
+        <Label text="Дата мероприятия"/>
+        <DatePicker fx:id="day" editable="false" maxWidth="Infinity"/>
+        <Label text="Время (HH:mm)"/>
+        <TextField fx:id="time" promptText="19:30"/>
+        <Label text="Цена, ₽"/>
+        <TextField fx:id="price" promptText="1500,00"/>
+        <Label fx:id="zoneInfo" wrapText="true" styleClass="muted"/>
+    </VBox>
+    <Label fx:id="errorLabel" wrapText="true" styleClass="error"/>
+</VBox>

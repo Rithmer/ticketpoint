@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.ReferencesController" spacing="12"
+      styleClass="tab-content">
+    <Button text="Обновить справочники" onAction="#refreshReferences"/>
+    <HBox fx:id="customerHeader" alignment="CENTER_LEFT" spacing="12">
+        <Label text="Клиенты" styleClass="heading"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="editCustomerButton" text="Изменить" onAction="#editCustomer" disable="true"/>
+        <Button fx:id="deleteCustomerButton" text="Удалить" onAction="#deleteCustomer" disable="true" styleClass="danger"/>
+        <Button fx:id="addCustomerButton" text="+ Новый клиент" onAction="#addCustomer" styleClass="primary"/>
+    </HBox>
+    <TableView fx:id="customerTable" VBox.vgrow="ALWAYS"/>
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <Label text="Мероприятия" styleClass="heading"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="editEventButton" text="Изменить" onAction="#editEvent" disable="true"/>
+        <Button fx:id="deleteEventButton" text="Удалить" onAction="#deleteEvent" disable="true" styleClass="danger"/>
+        <Button fx:id="addEventButton" text="+ Новое мероприятие" onAction="#addEvent" styleClass="primary"/>
+    </HBox>
+    <TableView fx:id="eventTable" VBox.vgrow="ALWAYS"/>
+</VBox>

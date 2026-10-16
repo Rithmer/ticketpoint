@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<ScrollPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.StatisticsController"
+            fitToWidth="true">
+    <VBox spacing="18" styleClass="tab-content">
+        <Label text="Статистика бронирований" styleClass="heading"/>
+        <Label fx:id="scope" text="Показатели по всей базе данных, независимо от фильтров списка." wrapText="true"/>
+        <Button text="Обновить статистику" onAction="#refreshStatistics"/>
+        <TilePane hgap="16" vgap="16" prefColumns="3" prefTileWidth="260" prefTileHeight="130">
+            <VBox spacing="14" styleClass="stat-card">
+                <Label text="Всего бронирований"/>
+                <Label fx:id="total" text="—" styleClass="stat-value"/>
+            </VBox>
+            <VBox spacing="14" styleClass="stat-card">
+                <Label text="Новые"/>
+                <Label fx:id="fresh" text="—" styleClass="stat-value"/>
+            </VBox>
+            <VBox spacing="14" styleClass="stat-card">
+                <Label text="Подтверждённые"/>
+                <Label fx:id="confirmed" text="—" styleClass="stat-value"/>
+            </VBox>
+            <VBox spacing="14" styleClass="stat-card">
+                <Label text="Оплаченные"/>
+                <Label fx:id="paid" text="—" styleClass="stat-value"/>
+            </VBox>
+            <VBox spacing="14" styleClass="stat-card">
+                <Label text="Отменённые"/>
+                <Label fx:id="cancelled" text="—" styleClass="stat-value"/>
+            </VBox>
+            <VBox spacing="14" styleClass="stat-card">
+                <Label text="Билеты от 5 000 ₽"/>
+                <Label fx:id="expensive" text="—" styleClass="stat-value"/>
+            </VBox>
+            <VBox spacing="14" styleClass="stat-card">
+                <Label text="Доля оплаченных"/>
+                <Label fx:id="paidShare" text="—" styleClass="stat-value"/>
+            </VBox>
+        </TilePane>
+    </VBox>
+</ScrollPane>

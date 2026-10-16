@@ -1,0 +1,136 @@
+.root {
+    -fx-font-family: "System";
+    -fx-font-size: 13px;
+    -fx-base: #f5f5f5;
+    -fx-accent: #46749a;
+    -fx-focus-color: #46749a;
+    -fx-faint-focus-color: #dce8f1;
+}
+
+.app-root {
+    -fx-background-color: #f5f5f5;
+}
+
+.masthead {
+    -fx-background-color: #eeeeee;
+    -fx-padding: 12 18;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 0 0 1 0;
+}
+
+.brand {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333333;
+}
+
+.heading {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333333;
+}
+
+.muted {
+    -fx-text-fill: #666666;
+}
+
+.tab-content {
+    -fx-padding: 12;
+    -fx-background-color: #ffffff;
+}
+
+.button {
+    -fx-padding: 7 12;
+    -fx-background-radius: 3;
+    -fx-border-radius: 3;
+    -fx-border-color: #bcbcbc;
+    -fx-background-color: #eeeeee;
+    -fx-text-fill: #333333;
+}
+
+.button:hover {
+    -fx-background-color: #e0e0e0;
+}
+
+.button.primary {
+    -fx-background-color: #46749a;
+    -fx-border-color: #46749a;
+    -fx-text-fill: #ffffff;
+}
+
+.button.primary:hover {
+    -fx-background-color: #385e7e;
+}
+
+.button.danger {
+    -fx-text-fill: #a12c2c;
+}
+
+.text-field, .combo-box, .date-picker {
+    -fx-pref-height: 32;
+    -fx-background-radius: 3;
+}
+
+.table-view {
+    -fx-border-color: #cccccc;
+    -fx-background-color: #ffffff;
+}
+
+.table-view .column-header, .table-view .filler {
+    -fx-background-color: #eeeeee;
+    -fx-pref-height: 34;
+}
+
+.table-row-cell {
+    -fx-cell-size: 34;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #f7f7f7;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #46749a;
+}
+
+.error {
+    -fx-text-fill: #a12c2c;
+}
+
+.invalid {
+    -fx-border-color: #a12c2c;
+    -fx-border-radius: 3;
+}
+
+.form {
+    -fx-padding: 8;
+}
+
+.stat-card {
+    -fx-background-color: #f7f7f7;
+    -fx-border-color: #dddddd;
+    -fx-padding: 16;
+}
+
+.stat-value {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333333;
+}
+
+.status-bar {
+    -fx-padding: 8 18;
+    -fx-background-color: #eeeeee;
+}
+
+.login-card {
+    -fx-background-color: white;
+    -fx-padding: 32;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: #dddddd;
+}
+
+.table-row-cell:selected .table-cell {
+    -fx-text-fill: white;
+}

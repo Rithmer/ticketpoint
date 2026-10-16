@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.UserDialogController" spacing="10" prefWidth="400" styleClass="form">
+    <Label text="Логин"/><TextField fx:id="login"/>
+    <Label text="Имя"/><TextField fx:id="name"/>
+    <Label text="Роль"/><ComboBox fx:id="role" maxWidth="Infinity"/>
+    <VBox fx:id="credentials" spacing="10">
+    <Label text="Временный пароль (12–128 символов)"/><PasswordField fx:id="password"/>
+    <Label text="Повторите пароль"/><PasswordField fx:id="confirmation"/>
+    <Label text="При первом входе пользователь сменит пароль" wrapText="true" styleClass="muted"/>
+    </VBox>
+    <Label fx:id="feedback" styleClass="error" wrapText="true"/>
+</VBox>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<StackPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.LoginController" styleClass="app-root">
+    <VBox maxWidth="400" maxHeight="-Infinity" spacing="18" alignment="CENTER_LEFT" styleClass="login-card">
+        <Label text="TicketPoint" styleClass="brand"/>
+        <Label text="Управление билетными бронированиями" styleClass="muted" wrapText="true"/>
+        <VBox fx:id="form" spacing="10">
+            <Label text="Логин"/>
+            <TextField fx:id="login" promptText="Ваш логин" onAction="#signIn"/>
+            <Label text="Пароль"/>
+            <PasswordField fx:id="password" promptText="Ваш пароль" onAction="#signIn"/>
+            <Button fx:id="signInButton" text="Войти" onAction="#signIn" maxWidth="Infinity" styleClass="primary"/>
+            <Button fx:id="showRegistrationButton" text="Нет аккаунта? Зарегистрироваться" onAction="#showRegistration" maxWidth="Infinity"/>
+        </VBox>
+        <VBox fx:id="registrationForm" spacing="8" visible="false" managed="false">
+            <Label text="Регистрация покупателя" styleClass="heading"/>
+            <Label text="Имя"/>
+            <TextField fx:id="registrationName" promptText="Как к вам обращаться"/>
+            <Label text="Логин"/>
+            <TextField fx:id="registrationLogin" promptText="3–40 символов: латиница, цифры, . _ -"/>
+            <Label text="Пароль (12–128 символов)"/>
+            <PasswordField fx:id="registrationPassword"/>
+            <Label text="Повторите пароль"/>
+            <PasswordField fx:id="registrationConfirmation" onAction="#register"/>
+            <Button fx:id="registerButton" text="Зарегистрироваться" onAction="#register" maxWidth="Infinity" styleClass="primary"/>
+            <Button text="Уже есть аккаунт? Войти" onAction="#showSignIn" maxWidth="Infinity"/>
+        </VBox>
+        <ProgressIndicator fx:id="progress" visible="false" prefWidth="24" prefHeight="24"/>
+        <Label fx:id="feedback" styleClass="error" wrapText="true"/>
+    </VBox>
+</StackPane>

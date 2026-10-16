@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<ScrollPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.BookingDetailsController"
+            fitToWidth="true" prefWidth="580" prefHeight="570">
+    <VBox spacing="10" styleClass="form">
+        <Label text="Билет" styleClass="heading"/>
+        <Label fx:id="ticketNumber" wrapText="true"/>
+        <Label text="Статус"/>
+        <Label fx:id="status"/>
+        <Label text="Дата создания"/>
+        <Label fx:id="createdAt"/>
+        <Label text="Цена при бронировании"/>
+        <Label fx:id="bookingPrice"/>
+        <Separator/>
+        <Label text="Клиент" styleClass="heading"/>
+        <Label fx:id="customerName" wrapText="true"/>
+        <Label text="Код клиента"/>
+        <Label fx:id="customerCode" wrapText="true"/>
+        <Separator/>
+        <Label text="Мероприятие" styleClass="heading"/>
+        <Label fx:id="eventTitle" wrapText="true"/>
+        <Label text="Место проведения"/>
+        <Label fx:id="venue" wrapText="true"/>
+        <Label text="Дата и время"/>
+        <Label fx:id="startsAt"/>
+        <Label text="Текущая цена мероприятия"/>
+        <Label fx:id="eventPrice"/>
+        <Label text="Цена билета фиксируется при создании бронирования." wrapText="true"/>
+        <Label fx:id="zoneInfo" wrapText="true"/>
+    </VBox>
+</ScrollPane>

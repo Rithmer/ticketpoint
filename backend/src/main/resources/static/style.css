@@ -1,0 +1,154 @@
+:root {
+    font-family: system-ui, sans-serif;
+    color: #202b3d;
+    background: #f1f4f8;
+}
+
+body {
+    margin: 0;
+}
+
+header {
+    padding: 28px max(24px, calc((100% - 1200px) / 2));
+    background: #173d67;
+    color: white;
+}
+
+h1, h2 {
+    margin: 0 0 12px;
+}
+
+header p {
+    margin: 0;
+}
+
+main {
+    max-width: 1200px;
+    margin: auto;
+    padding: 24px;
+}
+
+section {
+    padding: 24px;
+    background: white;
+    margin-bottom: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px #2030400a;
+}
+
+.section-heading, .filters, form {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.section-heading {
+    justify-content: space-between;
+    align-items: center;
+}
+
+label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+input, select, button {
+    font: inherit;
+    padding: 10px 12px;
+    border: 1px solid #bdc8d7;
+    border-radius: 6px;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+button {
+    background: #175a9c;
+    color: white;
+    cursor: pointer;
+}
+
+button:disabled {
+    opacity: .5;
+    cursor: wait;
+}
+
+button.danger {
+    background: #aa2a3e;
+}
+
+button.secondary {
+    background: #e7edf5;
+    color: #173d67;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e2e7ef;
+}
+
+td button {
+    margin: 4px;
+}
+
+th {
+    background: #f5f7fa;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.card {
+    padding: 18px;
+    background: #edf3fa;
+    border-radius: 8px;
+}
+
+.card strong {
+    display: block;
+    font-size: 28px;
+    margin-top: 10px;
+}
+
+#message {
+    min-height: 24px;
+    overflow-wrap: anywhere;
+}
+
+#message.error {
+    color: #aa2034;
+}
+
+li {
+    padding: 6px 0;
+}
+
+[hidden] { display: none !important; }
+summary { cursor: pointer; margin-bottom: 16px; }
+#auth-panel { max-width: 620px; margin: 40px auto; }
+#users li { margin-bottom: 10px; }
+#users li button { margin-left: 12px; }
+
+dialog { border: 1px solid #cbd5e1; border-radius: 12px; padding: 24px; max-width: 560px; width: calc(100% - 48px); }
+dialog::backdrop { background: #0f172a88; }
+dialog form { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+dialog label { display: flex; flex-direction: column; gap: 6px; }
+dialog input, dialog select { width: 100%; box-sizing: border-box; }
+
+#registration-form { flex-direction: column; align-items: stretch; max-width: 420px; }
+#registration-form label, #registration-form input { width: 100%; box-sizing: border-box; }

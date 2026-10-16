@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.CustomerDialogController" spacing="10"
+      prefWidth="480" styleClass="form">
+    <Label text="Имя клиента"/>
+    <TextField fx:id="name"/>
+    <Label fx:id="errorLabel" wrapText="true" styleClass="error"/>
+</VBox>
