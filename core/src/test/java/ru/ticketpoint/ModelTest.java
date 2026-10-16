@@ -65,7 +65,9 @@ class ModelTest {
     void validatesEveryStatusTransition() {
         for (BookingStatus from : BookingStatus.values()) {
             for (BookingStatus to : BookingStatus.values()) {
-                boolean allowed = from != BookingStatus.CANCELLED && !(from == BookingStatus.PAID && to == BookingStatus.NEW);
+                boolean allowed = from != BookingStatus.CANCELLED
+                        && !(from == BookingStatus.NEW && to == BookingStatus.PAID)
+                        && !(from == BookingStatus.PAID && to != BookingStatus.PAID && to != BookingStatus.CANCELLED);
                 assertEquals(allowed, from.canTransitionTo(to));
                 assertEquals(allowed, from.allowedTransitions().contains(to));
                 if (!allowed) {
@@ -87,6 +89,12 @@ class ModelTest {
         assertEquals(first.hashCode(), second.hashCode());
         assertNotEquals(new Customer(2L, CUSTOMER_CODE, "Иван"), first);
         assertEquals(event("12.340"), event("12.34"));
+    }
+
+    @Test
+    void eventCommandRejectsMissingAndUnsupportedDates() {
+        assertThrows(IllegalArgumentException.class, () -> new ru.ticketpoint.model.CreateEventCommand("Концерт", "Зал", null, BigDecimal.ONE));
+        assertThrows(IllegalArgumentException.class, () -> new ru.ticketpoint.model.CreateEventCommand("Концерт", "Зал", LocalDateTime.of(10000, 1, 1, 12, 0), BigDecimal.ONE));
     }
 
     private Event event(String price) {

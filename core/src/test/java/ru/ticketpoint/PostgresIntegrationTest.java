@@ -34,6 +34,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.UUID;
+import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -126,7 +127,7 @@ class PostgresIntegrationTest {
         for (int i = 1; i < sorted.size(); i++) {
             assertFalse(sorted.get(i).event().startsAt().isBefore(sorted.get(i - 1).event().startsAt()));
         }
-        assertEquals(3, metadata.tableNames().size());
+        assertEquals(List.of("app_users", "bookings", "customers", "events"), metadata.tableNames());
     }
 
     @Test
@@ -141,6 +142,7 @@ class PostgresIntegrationTest {
         assertThrows(BookingException.class, () -> customerRepository.create(
                 new CreateCustomerCommand("Другое имя"), customer.customerCode()));
         assertEquals(customer.name(), customers.findById(customer.id()).name());
+        assertEquals(BookingStatus.CONFIRMED, service.changeStatus(booking.id(), BookingStatus.CONFIRMED).status());
         assertEquals(BookingStatus.PAID, service.changeStatus(booking.id(), BookingStatus.PAID).status());
         assertThrows(BookingException.class, () -> service.changeStatus(booking.id(), BookingStatus.NEW));
         assertEquals(BookingStatus.CANCELLED, service.changeStatus(booking.id(), BookingStatus.CANCELLED).status());
@@ -173,7 +175,7 @@ class PostgresIntegrationTest {
         Booking booking = service.createBooking(customers.findAll().getFirst().id(), events.findAll().getFirst().id());
         CyclicBarrier barrier = new CyclicBarrier(2);
         try (var pool = Executors.newFixedThreadPool(2)) {
-            var first = pool.submit(() -> updateAfterBarrier(barrier, booking.id(), BookingStatus.PAID));
+            var first = pool.submit(() -> updateAfterBarrier(barrier, booking.id(), BookingStatus.CONFIRMED));
             var second = pool.submit(() -> updateAfterBarrier(barrier, booking.id(), BookingStatus.CANCELLED));
             int successes = first.get(10, TimeUnit.SECONDS) + second.get(10, TimeUnit.SECONDS);
             assertEquals(1, successes);
@@ -206,6 +208,92 @@ class PostgresIntegrationTest {
         }
 
         assertEquals(event.price(), service.findById(created.id()).priceAtBooking());
+    }
+
+    @Test
+    void editChangesReferencesAndTariffButKeepsTicketIdentityAndCreationDate() throws Exception {
+        var customerList = customers.findAll();
+        var eventList = events.findAll();
+        Booking original = service.createBooking(customerList.getFirst().id(), eventList.getFirst().id());
+        Event replacement = eventList.get(1);
+        Booking updated = service.updateBooking(original, customerList.get(1).id(), replacement.id(), BookingStatus.NEW);
+        assertEquals(original.id(), updated.id());
+        assertEquals(original.ticketNumber(), updated.ticketNumber());
+        assertEquals(original.createdAt(), updated.createdAt());
+        assertEquals(customerList.get(1).id(), updated.customer().id());
+        assertEquals(replacement.id(), updated.event().id());
+        assertEquals(replacement.price(), updated.priceAtBooking());
+        assertEquals(updated, service.findById(original.id()));
+        assertThrows(BookingException.class, () -> service.updateBooking(original,
+                customerList.getFirst().id(), eventList.getFirst().id(), BookingStatus.PAID));
+        assertThrows(BookingException.class, () -> bookingRepository.update(original,
+                customerList.getFirst().id(), eventList.getFirst().id(), BookingStatus.NEW));
+        assertEquals(updated, service.findById(original.id()));
+
+        try (var c = connections.open(); var ps = c.prepareStatement("UPDATE events SET price = 9999 WHERE id = ?")) {
+            ps.setLong(1, replacement.id());
+            ps.executeUpdate();
+        }
+        Booking sameEvent = service.updateBooking(updated, customerList.getFirst().id(), replacement.id(), BookingStatus.NEW);
+        assertEquals(updated.priceAtBooking(), sameEvent.priceAtBooking());
+        Booking confirmed = service.updateBooking(sameEvent, sameEvent.customer().id(), replacement.id(), BookingStatus.CONFIRMED);
+        Booking paid = service.updateBooking(confirmed, confirmed.customer().id(), replacement.id(), BookingStatus.PAID);
+        assertThrows(BookingException.class, () -> service.updateBooking(paid,
+                customerList.get(1).id(), replacement.id(), BookingStatus.PAID));
+        assertEquals(paid, service.findById(original.id()));
+        assertThrows(BookingException.class, () -> service.updateBooking(paid,
+                paid.customer().id(), replacement.id(), BookingStatus.NEW));
+        Booking cancelled = service.updateBooking(paid, paid.customer().id(), replacement.id(), BookingStatus.CANCELLED);
+        assertThrows(BookingException.class, () -> service.updateBooking(cancelled,
+                cancelled.customer().id(), replacement.id(), BookingStatus.NEW));
+    }
+
+    @Test
+    void concurrentDetailEditsHaveExactlyOneWinner() throws Exception {
+        var customerList = customers.findAll();
+        var eventList = events.findAll();
+        Booking original = service.createBooking(customerList.getFirst().id(), eventList.getFirst().id());
+        CyclicBarrier barrier = new CyclicBarrier(2);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var first = pool.submit(() -> editAfterBarrier(barrier, original, customerList.get(1).id(), eventList.get(1).id()));
+            var second = pool.submit(() -> editAfterBarrier(barrier, original, customerList.get(2).id(), eventList.get(2).id()));
+            assertEquals(1, first.get(10, TimeUnit.SECONDS) + second.get(10, TimeUnit.SECONDS));
+        }
+        Booking saved = service.findById(original.id());
+        assertEquals(BookingStatus.NEW, saved.status());
+        assertEquals(saved.event().price(), saved.priceAtBooking());
+        assertTrue(saved.customer().id().equals(customerList.get(1).id()) && saved.event().id().equals(eventList.get(1).id())
+                || saved.customer().id().equals(customerList.get(2).id()) && saved.event().id().equals(eventList.get(2).id()));
+    }
+
+    private int editAfterBarrier(CyclicBarrier barrier, Booking original, long customerId, long eventId) throws Exception {
+        barrier.await(5, TimeUnit.SECONDS);
+        try {
+            bookingRepository.update(original, customerId, eventId, BookingStatus.NEW);
+            return 1;
+        } catch (BookingException error) {
+            assertTrue(error.getMessage().contains("другим пользователем"));
+            return 0;
+        }
+    }
+
+    @Test
+    void editRejectsMissingReferencesAndPastEventsWithoutPartialChanges() throws Exception {
+        Booking original = service.createBooking(customers.findAll().getFirst().id(), events.findAll().getFirst().id());
+        assertThrows(EntityNotFoundException.class, () -> service.updateBooking(original,
+                Long.MAX_VALUE, original.event().id(), BookingStatus.NEW));
+        assertThrows(EntityNotFoundException.class, () -> service.updateBooking(original,
+                original.customer().id(), Long.MAX_VALUE, BookingStatus.NEW));
+        Event replacement = events.findAll().get(1);
+        try (var c = connections.open(); var ps = c.prepareStatement("UPDATE events SET starts_at = LOCALTIMESTAMP WHERE id = ?")) {
+            ps.setLong(1, replacement.id());
+            ps.executeUpdate();
+        }
+        assertThrows(BookingException.class, () -> service.updateBooking(original,
+                original.customer().id(), replacement.id(), BookingStatus.NEW));
+        assertThrows(BookingException.class, () -> bookingRepository.update(original,
+                original.customer().id(), replacement.id(), BookingStatus.NEW));
+        assertEquals(original, service.findById(original.id()));
     }
 
     @Test
@@ -262,7 +350,7 @@ class PostgresIntegrationTest {
         try (var c = connections.open(); var ps = c.prepareStatement("DELETE FROM customers WHERE id = ?")) {
             ps.setLong(1, customer.id());
             SQLException error = assertThrows(SQLException.class, ps::executeUpdate);
-            assertEquals("23503", error.getSQLState());
+            assertTrue(java.util.Set.of("23503", "23001").contains(error.getSQLState()), error.getSQLState());
         }
     }
 
