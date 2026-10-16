@@ -1,3 +1,4 @@
+name: ticketpoint
 services:
   postgres:
     image: postgres:17-alpine
@@ -18,26 +19,25 @@ services:
       interval: 3s
       timeout: 3s
       retries: 10
-  ticketpoint:
-    profiles: ["production"]
-    build: .
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ticketpoint}
       DB_USER: ${POSTGRES_USER:-ticketpoint}
       DB_PASSWORD: ${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD в .env}
       APP_ZONE: ${APP_ZONE:-Europe/Moscow}
-      DB_CONNECT_TIMEOUT_SECONDS: ${DB_CONNECT_TIMEOUT_SECONDS:-5}
-      DB_STATEMENT_TIMEOUT_SECONDS: ${DB_STATEMENT_TIMEOUT_SECONDS:-15}
-      DB_SOCKET_TIMEOUT_SECONDS: ${DB_SOCKET_TIMEOUT_SECONDS:-30}
+      BOOTSTRAP_ADMIN_LOGIN: ${BOOTSTRAP_ADMIN_LOGIN:-admin}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-Администратор}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8080
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
-    stdin_open: true
-    tty: true
-    volumes:
-      - ticketpoint_logs:/app/logs
-      - ticketpoint_exports:/app/exports
 volumes:
   ticketpoint_data:
-  ticketpoint_logs:
-  ticketpoint_exports:
