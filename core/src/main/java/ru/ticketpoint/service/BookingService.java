@@ -1,21 +1,22 @@
 package ru.ticketpoint.service;
 
-import ru.ticketpoint.exception.BookingException;
-import ru.ticketpoint.exception.EntityNotFoundException;
-import ru.ticketpoint.model.Booking;
-import ru.ticketpoint.model.BookingStatistics;
-import ru.ticketpoint.model.BookingStatus;
-import ru.ticketpoint.model.BookingSort;
-import ru.ticketpoint.model.Event;
-import ru.ticketpoint.model.Validation;
-import ru.ticketpoint.repository.BookingRepository;
-
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
+
+import ru.ticketpoint.auth.AuthException;
+import ru.ticketpoint.exception.BookingException;
+import ru.ticketpoint.exception.EntityNotFoundException;
+import ru.ticketpoint.model.Booking;
+import ru.ticketpoint.model.BookingSort;
+import ru.ticketpoint.model.BookingStatistics;
+import ru.ticketpoint.model.BookingStatus;
+import ru.ticketpoint.model.Event;
+import ru.ticketpoint.model.Validation;
+import ru.ticketpoint.repository.BookingRepository;
 
 public final class BookingService {
     private static final BigDecimal EXPENSIVE_THRESHOLD = new BigDecimal("5000.00");
@@ -45,14 +46,20 @@ public final class BookingService {
         if (!access.personal()) access.write().run();
         customers.findById(customerId);
         Event event = events.findById(eventId);
-        EventSchedule.requireFuture(event.startsAt(), clock);
+        requireAvailable(event);
         String number = "TP-" + UUID.randomUUID().toString().toUpperCase(Locale.ROOT);
         return bookings.create(customerId, eventId, number);
     }
 
+    private void requireAvailable(Event event) {
+        if (!event.active())
+            throw new BookingException("Это мероприятие больше недоступно для бронирования. Выберите другое.");
+        EventSchedule.requireFuture(event.startsAt(), clock);
+    }
+
     public List<Booking> findAll() {
         access.read().run();
-        return access.personal() ? bookings.findByCustomerId(access.customerId()) : bookings.findAll();
+        return access.personal() ? bookings.findByCustomerId(access.requireCustomerId()) : bookings.findAll();
     }
 
     public Booking findById(long id) {
@@ -92,13 +99,7 @@ public final class BookingService {
         Booking current = findById(Objects.requireNonNull(expected.id()));
         access.requireCustomer(customerId);
         authorizeChange(current, next);
-        if (current.status() != expected.status()
-                || !current.customer().id().equals(expected.customer().id())
-                || !current.event().id().equals(expected.event().id())
-                || current.priceAtBooking().compareTo(expected.priceAtBooking()) != 0) {
-            throw new BookingException("Бронирование уже изменено другим пользователем. "
-                    + "Закройте форму, обновите список и повторите изменение");
-        }
+        current.requireUnchanged(expected);
         current.status().validateTransitionTo(next);
         boolean detailsChanged = customerId != current.customer().id() || eventId != current.event().id();
         if (detailsChanged) {
@@ -109,7 +110,7 @@ public final class BookingService {
             EventSchedule.requireFuture(current.event().startsAt(), clock);
             customers.findById(customerId);
             Event selected = events.findById(eventId);
-            EventSchedule.requireFuture(selected.startsAt(), clock);
+            requireAvailable(selected);
         }
         return bookings.update(current, customerId, eventId, next);
     }
@@ -119,8 +120,8 @@ public final class BookingService {
         if (access.personal()) {
             if (!(current.status() == BookingStatus.NEW && next == BookingStatus.NEW
                     || (current.status() == BookingStatus.NEW || current.status() == BookingStatus.CONFIRMED)
-                        && next == BookingStatus.CANCELLED))
-                throw new ru.ticketpoint.auth.AuthException("Подтверждение и отметка оплаты доступны менеджеру. "
+                    && next == BookingStatus.CANCELLED))
+                throw new AuthException("Подтверждение и отметка оплаты доступны менеджеру. "
                         + "Можно изменить новую заявку или отменить свою неоплаченную заявку", true);
             EventSchedule.requireFuture(current.event().startsAt(), clock);
         } else access.write().run();
@@ -174,7 +175,6 @@ public final class BookingService {
     }
 
     private List<Booking> visible(List<Booking> rows) {
-        return access.personal() ? rows.stream().filter(b -> b.customer().id().equals(access.customerId())).toList() : rows;
+        return access.personal() ? rows.stream().filter(b -> b.customer().id().equals(access.requireCustomerId())).toList() : rows;
     }
-
 }

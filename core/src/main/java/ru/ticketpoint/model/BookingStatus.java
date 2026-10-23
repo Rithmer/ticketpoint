@@ -1,8 +1,9 @@
 package ru.ticketpoint.model;
 
-import ru.ticketpoint.exception.BookingException;
 import java.util.Arrays;
 import java.util.List;
+
+import ru.ticketpoint.exception.BookingException;
 
 public enum BookingStatus {
     NEW, CONFIRMED, PAID, CANCELLED;

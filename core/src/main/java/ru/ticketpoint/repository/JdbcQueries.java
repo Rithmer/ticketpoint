@@ -1,6 +1,5 @@
 package ru.ticketpoint.repository;
 
-import ru.ticketpoint.config.ConnectionProvider;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -10,10 +9,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import ru.ticketpoint.config.ConnectionProvider;
+
 final class JdbcQueries {
     private final ConnectionProvider connections;
 
-    JdbcQueries(ConnectionProvider connections) { this.connections = Objects.requireNonNull(connections); }
+    JdbcQueries(ConnectionProvider connections) {
+        this.connections = Objects.requireNonNull(connections);
+    }
 
     <T> List<T> list(StatementFactory factory, Parameters parameters, RowMapper<T> mapper, String operation) {
         try (var connection = connections.open(); var statement = factory.prepare(connection)) {
@@ -37,10 +40,16 @@ final class JdbcQueries {
         PreparedStatement prepare(Connection connection) throws SQLException;
     }
 
-    @FunctionalInterface interface Parameters {
-        Parameters NONE = statement -> { };
+    @FunctionalInterface
+    interface Parameters {
+        Parameters NONE = statement -> {
+        };
+
         void bind(PreparedStatement statement) throws SQLException;
     }
 
-    @FunctionalInterface interface RowMapper<T> { T map(ResultSet result) throws SQLException; }
+    @FunctionalInterface
+    interface RowMapper<T> {
+        T map(ResultSet result) throws SQLException;
+    }
 }

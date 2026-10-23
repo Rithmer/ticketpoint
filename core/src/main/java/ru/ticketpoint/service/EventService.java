@@ -1,14 +1,14 @@
 package ru.ticketpoint.service;
 
+import java.time.Clock;
+import java.util.List;
+import java.util.Objects;
+
 import ru.ticketpoint.exception.EntityNotFoundException;
 import ru.ticketpoint.model.CreateEventCommand;
 import ru.ticketpoint.model.Event;
 import ru.ticketpoint.model.Validation;
 import ru.ticketpoint.repository.EventRepository;
-
-import java.time.Clock;
-import java.util.List;
-import java.util.Objects;
 
 public final class EventService {
     private final EventRepository events;
@@ -34,7 +34,8 @@ public final class EventService {
     }
 
     public Event update(long id, CreateEventCommand command) {
-        access.admin(); findById(id);
+        access.admin();
+        findById(id);
         EventSchedule.requireFuture(command.startsAt(), clock);
         return events.update(id, command);
     }
@@ -54,5 +55,4 @@ public final class EventService {
         return events.findById(Validation.id(id))
                 .orElseThrow(() -> new EntityNotFoundException("Мероприятие не найдено"));
     }
-
 }

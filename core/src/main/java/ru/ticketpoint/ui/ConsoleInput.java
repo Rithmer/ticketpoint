@@ -1,8 +1,7 @@
 package ru.ticketpoint.ui;
 
-import ru.ticketpoint.model.BookingStatus;
-
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -11,6 +10,8 @@ import java.time.format.ResolverStyle;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Scanner;
+
+import ru.ticketpoint.model.BookingStatus;
 
 final class ConsoleInput {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.uuuu HH:mm")
@@ -66,6 +67,7 @@ final class ConsoleInput {
     }
 
     static final class EndOfInputException extends RuntimeException {
-        @java.io.Serial private static final long serialVersionUID = 1L;
+        @Serial
+        private static final long serialVersionUID = 1L;
     }
 }

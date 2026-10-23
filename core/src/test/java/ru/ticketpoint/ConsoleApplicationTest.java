@@ -1,13 +1,16 @@
 package ru.ticketpoint;
 
-import org.junit.jupiter.api.Test;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Scanner;
+
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class ConsoleApplicationTest {
-    @Test void helpWorksWithoutConnectingToDatabase() {
+    @Test
+    void helpWorksWithoutConnectingToDatabase() {
         StringWriter output = new StringWriter();
         StringWriter errors = new StringWriter();
         int code = ConsoleApplication.run(new String[]{"--help"}, new Scanner(""),
@@ -18,7 +21,8 @@ class ConsoleApplicationTest {
         assertEquals("", errors.toString());
     }
 
-    @Test void malformedArgumentsReturnUsageAndExitCodeTwo() {
+    @Test
+    void malformedArgumentsReturnUsageAndExitCodeTwo() {
         for (String[] args : new String[][]{{"unknown"}, {"--export"}, {"--export", " "}, {"--check", "extra"}}) {
             StringWriter errors = new StringWriter();
             int code = ConsoleApplication.run(args, new Scanner(""), new PrintWriter(new StringWriter()), new PrintWriter(errors));

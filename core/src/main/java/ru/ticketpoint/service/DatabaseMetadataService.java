@@ -1,9 +1,9 @@
 package ru.ticketpoint.service;
 
-import ru.ticketpoint.repository.DatabaseMetadataRepository;
-
 import java.util.List;
 import java.util.Objects;
+
+import ru.ticketpoint.repository.DatabaseMetadataRepository;
 
 public final class DatabaseMetadataService {
     private final DatabaseMetadataRepository metadata;

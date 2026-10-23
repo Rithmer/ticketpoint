@@ -1,22 +1,24 @@
 package ru.ticketpoint;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Locale;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ru.ticketpoint.exception.BookingException;
-import ru.ticketpoint.model.BookingStatus;
 import ru.ticketpoint.model.Booking;
+import ru.ticketpoint.model.BookingStatus;
+import ru.ticketpoint.model.CreateEventCommand;
 import ru.ticketpoint.model.Customer;
 import ru.ticketpoint.model.Event;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class ModelTest {
     private static final String CUSTOMER_CODE = "CUS-12345678-1234-1234-1234-1234567890AB";
+
     @ParameterizedTest
     @ValueSource(strings = {"-1", "1.001", "10000000000"})
     void rejectsPricesThatCannotBeStoredExactly(String value) {
@@ -93,8 +95,8 @@ class ModelTest {
 
     @Test
     void eventCommandRejectsMissingAndUnsupportedDates() {
-        assertThrows(IllegalArgumentException.class, () -> new ru.ticketpoint.model.CreateEventCommand("Концерт", "Зал", null, BigDecimal.ONE));
-        assertThrows(IllegalArgumentException.class, () -> new ru.ticketpoint.model.CreateEventCommand("Концерт", "Зал", LocalDateTime.of(10000, 1, 1, 12, 0), BigDecimal.ONE));
+        assertThrows(IllegalArgumentException.class, () -> new CreateEventCommand("Концерт", "Зал", null, BigDecimal.ONE));
+        assertThrows(IllegalArgumentException.class, () -> new CreateEventCommand("Концерт", "Зал", LocalDateTime.of(10000, 1, 1, 12, 0), BigDecimal.ONE));
     }
 
     private Event event(String price) {

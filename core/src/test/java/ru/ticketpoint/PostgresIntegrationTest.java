@@ -1,28 +1,5 @@
 package ru.ticketpoint;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.junit.jupiter.api.io.TempDir;
-import ru.ticketpoint.config.ConnectionProvider;
-import ru.ticketpoint.exception.BookingException;
-import ru.ticketpoint.exception.EntityNotFoundException;
-import ru.ticketpoint.model.Booking;
-import ru.ticketpoint.model.BookingStatus;
-import ru.ticketpoint.model.Customer;
-import ru.ticketpoint.model.CreateCustomerCommand;
-import ru.ticketpoint.model.CreateEventCommand;
-import ru.ticketpoint.model.Event;
-import ru.ticketpoint.repository.JdbcBookingRepository;
-import ru.ticketpoint.repository.JdbcCustomerRepository;
-import ru.ticketpoint.repository.JdbcDatabaseMetadataRepository;
-import ru.ticketpoint.repository.JdbcEventRepository;
-import ru.ticketpoint.service.BookingService;
-import ru.ticketpoint.service.CustomerService;
-import ru.ticketpoint.service.DatabaseMetadataService;
-import ru.ticketpoint.service.EventService;
-
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,11 +10,35 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.UUID;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.api.io.TempDir;
+import ru.ticketpoint.config.ConnectionProvider;
+import ru.ticketpoint.exception.BookingException;
+import ru.ticketpoint.exception.EntityNotFoundException;
+import ru.ticketpoint.model.Booking;
+import ru.ticketpoint.model.BookingStatus;
+import ru.ticketpoint.model.CreateCustomerCommand;
+import ru.ticketpoint.model.CreateEventCommand;
+import ru.ticketpoint.model.Customer;
+import ru.ticketpoint.model.Event;
+import ru.ticketpoint.repository.JdbcBookingRepository;
+import ru.ticketpoint.repository.JdbcCustomerRepository;
+import ru.ticketpoint.repository.JdbcDatabaseMetadataRepository;
+import ru.ticketpoint.repository.JdbcEventRepository;
+import ru.ticketpoint.service.BookingService;
+import ru.ticketpoint.service.CustomerService;
+import ru.ticketpoint.service.DatabaseMetadataService;
+import ru.ticketpoint.service.EventService;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -350,8 +351,7 @@ class PostgresIntegrationTest {
         try (var c = connections.open(); var ps = c.prepareStatement("DELETE FROM customers WHERE id = ?")) {
             ps.setLong(1, customer.id());
             SQLException error = assertThrows(SQLException.class, ps::executeUpdate);
-            assertTrue(java.util.Set.of("23503", "23001").contains(error.getSQLState()), error.getSQLState());
+            assertTrue(Set.of("23503", "23001").contains(error.getSQLState()), error.getSQLState());
         }
     }
-
 }

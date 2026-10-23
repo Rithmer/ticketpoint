@@ -1,9 +1,9 @@
 package ru.ticketpoint.service;
 
-import ru.ticketpoint.config.ConnectionProvider;
-
 import java.sql.SQLException;
 import java.util.Objects;
+
+import ru.ticketpoint.config.ConnectionProvider;
 
 public final class DatabasePreflight {
     private final ConnectionProvider connections;

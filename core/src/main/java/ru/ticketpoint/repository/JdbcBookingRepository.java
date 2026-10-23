@@ -1,15 +1,5 @@
 package ru.ticketpoint.repository;
 
-import ru.ticketpoint.config.ConnectionProvider;
-import ru.ticketpoint.exception.BookingException;
-import ru.ticketpoint.exception.EntityNotFoundException;
-import ru.ticketpoint.model.Booking;
-import ru.ticketpoint.model.BookingStatistics;
-import ru.ticketpoint.model.BookingStatus;
-import ru.ticketpoint.model.BookingSort;
-import ru.ticketpoint.model.Customer;
-import ru.ticketpoint.model.Event;
-
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -20,12 +10,23 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import ru.ticketpoint.config.ConnectionProvider;
+import ru.ticketpoint.exception.BookingException;
+import ru.ticketpoint.exception.EntityNotFoundException;
+import ru.ticketpoint.model.Booking;
+import ru.ticketpoint.model.BookingSort;
+import ru.ticketpoint.model.BookingStatistics;
+import ru.ticketpoint.model.BookingStatus;
+import ru.ticketpoint.model.Customer;
+import ru.ticketpoint.model.Event;
+
 public final class JdbcBookingRepository implements BookingRepository {
     private static final String SELECT_BASE = """
-            SELECT b.id booking_id, b.ticket_number, b.price_at_booking, b.status, b.created_at,
+            SELECT b.id booking_id, b.ticket_number, b.price_at_booking, b.status, b.created_at, COALESCE((to_jsonb(b)->>'version')::bigint, 0) AS booking_version,
                    c.id AS customer_record_id, c.customer_code, c.name customer_name,
-                   e.id AS event_record_id, e.title, e.venue, e.starts_at, e.price
-            FROM bookings b
+                   e.id AS event_record_id, e.title, e.venue, e.starts_at, e.price,
+                   COALESCE((to_jsonb(e)->>'active')::boolean, true) AS event_active
+            FROM (SELECT * FROM bookings WHERE NOT COALESCE((to_jsonb(bookings)->>'archived')::boolean, false)) b
             JOIN customers c ON c.id = b.customer_id
             JOIN events e ON e.id = b.event_id
             """;
@@ -43,6 +44,7 @@ public final class JdbcBookingRepository implements BookingRepository {
             String sql = """
                     INSERT INTO bookings(ticket_number, customer_id, event_id, price_at_booking)
                     SELECT ?, ?, id, price FROM events WHERE id = ? AND starts_at > LOCALTIMESTAMP
+                      AND COALESCE((to_jsonb(events)->>'active')::boolean, true)
                     RETURNING id
                     """;
             long id;
@@ -109,12 +111,12 @@ public final class JdbcBookingRepository implements BookingRepository {
                 JdbcBookingRepository::map, "Не удалось прочитать бронирование");
     }
 
-    @Override
-    public Booking updateStatus(long id, BookingStatus expected, BookingStatus next) {
+    public void updateStatus(long id, BookingStatus expected, BookingStatus next) {
         expected.validateTransitionTo(next);
-        return transaction(connection -> {
+        transaction(connection -> {
             String sql = "UPDATE bookings SET status = ?::booking_status "
-                    + "WHERE id = ? AND status = ?::booking_status";
+                    + "WHERE id = ? AND status = ?::booking_status "
+                    + "AND NOT COALESCE((to_jsonb(bookings)->>'archived')::boolean, false)";
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.setString(1, next.name());
                 statement.setLong(2, id);
@@ -148,7 +150,10 @@ public final class JdbcBookingRepository implements BookingRepository {
                     WHERE b.id = ? AND e.id = ? AND original.id = b.event_id
                       AND b.customer_id = ? AND b.event_id = ?
                       AND b.status = ?::booking_status AND b.price_at_booking = ?
+                      AND COALESCE((to_jsonb(b)->>'version')::bigint, 0) = ?
+                      AND NOT COALESCE((to_jsonb(b)->>'archived')::boolean, false)
                       AND (NOT ? OR (original.starts_at > LOCALTIMESTAMP AND e.starts_at > LOCALTIMESTAMP))
+                      AND (b.event_id = e.id OR COALESCE((to_jsonb(e)->>'active')::boolean, true))
                     """;
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.setLong(1, customerId);
@@ -159,17 +164,12 @@ public final class JdbcBookingRepository implements BookingRepository {
                 statement.setLong(6, expected.event().id());
                 statement.setString(7, expected.status().name());
                 statement.setBigDecimal(8, expected.priceAtBooking());
-                statement.setBoolean(9, detailsChanged || next == BookingStatus.CONFIRMED || next == BookingStatus.PAID);
+                statement.setLong(9, expected.version());
+                statement.setBoolean(10, detailsChanged || next == BookingStatus.CONFIRMED || next == BookingStatus.PAID);
                 if (statement.executeUpdate() == 0) {
                     Booking current = findById(connection, expected.id())
                             .orElseThrow(() -> new EntityNotFoundException("Бронирование не найдено"));
-                    if (current.status() != expected.status()
-                            || !current.customer().id().equals(expected.customer().id())
-                            || !current.event().id().equals(expected.event().id())
-                            || current.priceAtBooking().compareTo(expected.priceAtBooking()) != 0) {
-                        throw new BookingException("Бронирование уже изменено другим пользователем. "
-                                + "Закройте форму, обновите список и повторите изменение");
-                    }
+                    current.requireUnchanged(expected);
                     throw new BookingException("Мероприятие удалено или уже началось. "
                             + "Обновите список и выберите будущее мероприятие");
                 }
@@ -182,25 +182,23 @@ public final class JdbcBookingRepository implements BookingRepository {
     @Override
     public boolean delete(Booking expected) {
         try (Connection connection = connections.open();
-             PreparedStatement statement = connection.prepareStatement("DELETE FROM bookings WHERE id=? AND customer_id=? "
-                     + "AND event_id=? AND status=?::booking_status AND price_at_booking=?")) {
-            statement.setLong(1, expected.id()); statement.setLong(2, expected.customer().id());
-            statement.setLong(3, expected.event().id()); statement.setString(4, expected.status().name());
+             PreparedStatement statement = connection.prepareStatement((JdbcSchema.hasColumn(connection, "bookings", "archived")
+                     ? "UPDATE bookings SET archived=true WHERE NOT archived AND id=? AND customer_id=? "
+                     : "DELETE FROM bookings WHERE id=? AND customer_id=? ")
+                     + "AND event_id=? AND status=?::booking_status AND price_at_booking=? "
+                     + "AND COALESCE((to_jsonb(bookings)->>'version')::bigint,0)=?")) {
+            statement.setLong(1, expected.id());
+            statement.setLong(2, expected.customer().id());
+            statement.setLong(3, expected.event().id());
+            statement.setString(4, expected.status().name());
             statement.setBigDecimal(5, expected.priceAtBooking());
+            statement.setLong(6, expected.version());
             return statement.executeUpdate() > 0;
-        } catch (SQLException error) { throw SqlExceptionTranslator.translate("Не удалось удалить бронирование", error); }
-    }
-
-    @Override
-    public boolean delete(long id) {
-        try (Connection connection = connections.open();
-             PreparedStatement statement = connection.prepareStatement("DELETE FROM bookings WHERE id = ?")) {
-            statement.setLong(1, id);
-            return statement.executeUpdate() > 0;
-        } catch (SQLException e) {
-            throw SqlExceptionTranslator.translate("Не удалось удалить бронирование", e);
+        } catch (SQLException error) {
+            throw SqlExceptionTranslator.translate("Не удалось удалить бронирование", error);
         }
     }
+
 
     @Override
     public BookingStatistics statistics(BigDecimal threshold) {
@@ -212,7 +210,7 @@ public final class JdbcBookingRepository implements BookingRepository {
                        COUNT(*) FILTER (WHERE b.status = 'PAID') AS paid,
                        COUNT(*) FILTER (WHERE b.status = 'CANCELLED') AS cancelled,
                        COUNT(*) FILTER (WHERE b.price_at_booking >= ?) AS expensive
-                FROM bookings b
+                FROM (SELECT * FROM bookings WHERE NOT COALESCE((to_jsonb(bookings)->>'archived')::boolean, false)) b
                 """;
         try (Connection connection = connections.open();
              PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -267,10 +265,10 @@ public final class JdbcBookingRepository implements BookingRepository {
                 result.getString("customer_name"));
         Event event = new Event(result.getLong("event_record_id"), result.getString("title"),
                 result.getString("venue"), result.getObject("starts_at", LocalDateTime.class),
-                result.getBigDecimal("price"));
+                result.getBigDecimal("price"), result.getBoolean("event_active"));
         return new Booking(result.getLong("booking_id"), result.getString("ticket_number"), customer, event,
                 result.getBigDecimal("price_at_booking"), BookingStatus.valueOf(result.getString("status")),
-                result.getObject("created_at", LocalDateTime.class));
+                result.getObject("created_at", LocalDateTime.class), result.getLong("booking_version"));
     }
 
     @FunctionalInterface

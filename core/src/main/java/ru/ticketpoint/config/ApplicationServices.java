@@ -1,12 +1,15 @@
 package ru.ticketpoint.config;
 
+import java.time.Clock;
+import java.util.Objects;
+import java.util.function.Supplier;
+
+import ru.ticketpoint.auth.AuthService;
+import ru.ticketpoint.auth.User;
 import ru.ticketpoint.export.BookingExporter;
 import ru.ticketpoint.export.ExcelBookingExporter;
 import ru.ticketpoint.repository.*;
 import ru.ticketpoint.service.*;
-
-import java.time.Clock;
-import java.util.Objects;
 
 public record ApplicationServices(BookingService bookings, CustomerService customers, EventService events,
                                   DatabaseMetadataService metadata, DatabasePreflight preflight,
@@ -29,8 +32,8 @@ public record ApplicationServices(BookingService bookings, CustomerService custo
         return create(connections, clock, AccessPolicy.TRUSTED);
     }
 
-    public static ApplicationServices secured(DatabaseConfig config, ru.ticketpoint.auth.AuthService auth,
-                                              java.util.function.Supplier<ru.ticketpoint.auth.User> user) {
+    public static ApplicationServices secured(DatabaseConfig config, AuthService auth,
+                                              Supplier<User> user) {
         return create(new JdbcConnectionProvider(config), Clock.system(config.zone()),
                 new AccessPolicy(() -> auth.requireRead(user.get()), () -> auth.requireWrite(user.get()),
                         () -> auth.current(user.get())));
@@ -46,9 +49,9 @@ public record ApplicationServices(BookingService bookings, CustomerService custo
                 customerService, eventService,
                 new DatabaseMetadataService(new JdbcDatabaseMetadataRepository(connections)),
                 new DatabasePreflight(connections), (rows, path) -> {
-                    access.read().run();
-                    for (var row : rows) access.requireCustomer(row.customer().id());
-                    new ExcelBookingExporter().export(rows, path);
-                }, clock);
+            access.read().run();
+            for (var row : rows) access.requireCustomer(row.customer().id());
+            new ExcelBookingExporter().export(rows, path);
+        }, clock);
     }
 }

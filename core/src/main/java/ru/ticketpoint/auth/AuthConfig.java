@@ -1,8 +1,9 @@
 package ru.ticketpoint.auth;
 
-import ru.ticketpoint.config.EnvironmentFile;
 import java.nio.file.Path;
 import java.util.Map;
+
+import ru.ticketpoint.config.EnvironmentFile;
 
 public record AuthConfig(String login, String name, String password) {
     public static AuthConfig fromEnvironment() {
@@ -10,5 +11,9 @@ public record AuthConfig(String login, String name, String password) {
         return new AuthConfig(env.getOrDefault("BOOTSTRAP_ADMIN_LOGIN", "admin"),
                 env.getOrDefault("BOOTSTRAP_ADMIN_NAME", "Администратор"), env.get("BOOTSTRAP_ADMIN_PASSWORD"));
     }
-    @Override public String toString() { return "AuthConfig[credentials=<hidden>]"; }
+
+    @Override
+    public @org.jetbrains.annotations.NotNull String toString() {
+        return "AuthConfig[credentials=<hidden>]";
+    }
 }

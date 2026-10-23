@@ -1,5 +1,13 @@
 package ru.ticketpoint;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.sql.SQLException;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.junit.jupiter.api.Test;
 import ru.ticketpoint.config.ConnectionProvider;
 import ru.ticketpoint.export.ExcelBookingExporter;
@@ -12,14 +20,6 @@ import ru.ticketpoint.service.CustomerService;
 import ru.ticketpoint.service.DatabaseMetadataService;
 import ru.ticketpoint.service.EventService;
 import ru.ticketpoint.ui.ConsoleUi;
-
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.sql.SQLException;
-import java.time.Clock;
-import java.time.Duration;
-import java.util.Scanner;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 

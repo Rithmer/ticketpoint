@@ -1,13 +1,14 @@
 package ru.ticketpoint.repository;
 
-import ru.ticketpoint.config.ConnectionProvider;
-import ru.ticketpoint.model.CreateCustomerCommand;
-import ru.ticketpoint.model.Customer;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+
+import ru.ticketpoint.config.ConnectionProvider;
+import ru.ticketpoint.exception.EntityNotFoundException;
+import ru.ticketpoint.model.CreateCustomerCommand;
+import ru.ticketpoint.model.Customer;
 
 public final class JdbcCustomerRepository implements CustomerRepository {
     private final JdbcQueries queries;
@@ -22,18 +23,19 @@ public final class JdbcCustomerRepository implements CustomerRepository {
                 + "RETURNING id, customer_code, name";
         String code = Customer.normalizeCode(customerCode);
         return queries.one(connection -> connection.prepareStatement(sql), statement -> {
-            statement.setString(1, code);
-            statement.setString(2, customer.name());
-        }, JdbcCustomerRepository::map, "Не удалось создать клиента")
+                    statement.setString(1, code);
+                    statement.setString(2, customer.name());
+                }, JdbcCustomerRepository::map, "Не удалось создать клиента")
                 .orElseThrow(() -> new IllegalStateException("INSERT клиента не вернул созданную запись"));
     }
 
     @Override
     public Customer update(long id, CreateCustomerCommand command) {
         return queries.one(c -> c.prepareStatement("UPDATE customers SET name=? WHERE id=? RETURNING *"), statement -> {
-            statement.setString(1, command.name()); statement.setLong(2, id);
-        }, JdbcCustomerRepository::map, "Не удалось изменить запись")
-                .orElseThrow(() -> new ru.ticketpoint.exception.EntityNotFoundException("Запись не найдена"));
+                    statement.setString(1, command.name());
+                    statement.setLong(2, id);
+                }, JdbcCustomerRepository::map, "Не удалось изменить запись")
+                .orElseThrow(() -> new EntityNotFoundException("Запись не найдена"));
     }
 
     @Override

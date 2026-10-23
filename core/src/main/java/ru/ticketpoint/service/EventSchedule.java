@@ -1,12 +1,13 @@
 package ru.ticketpoint.service;
 
-import ru.ticketpoint.exception.BookingException;
-
 import java.time.Clock;
 import java.time.LocalDateTime;
 
+import ru.ticketpoint.exception.BookingException;
+
 final class EventSchedule {
-    private EventSchedule() { }
+    private EventSchedule() {
+    }
 
     static void requireFuture(LocalDateTime startsAt, Clock clock) {
         if (!startsAt.isAfter(LocalDateTime.now(clock))) {

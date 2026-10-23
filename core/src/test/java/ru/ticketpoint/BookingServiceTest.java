@@ -1,5 +1,15 @@
 package ru.ticketpoint;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.junit.jupiter.api.Test;
 import ru.ticketpoint.exception.BookingException;
 import ru.ticketpoint.exception.DataAccessException;
@@ -11,19 +21,10 @@ import ru.ticketpoint.model.Event;
 import ru.ticketpoint.repository.BookingRepository;
 import ru.ticketpoint.repository.CustomerRepository;
 import ru.ticketpoint.repository.EventRepository;
+import ru.ticketpoint.service.AccessPolicy;
 import ru.ticketpoint.service.BookingService;
 import ru.ticketpoint.service.CustomerService;
 import ru.ticketpoint.service.EventService;
-
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
-import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,13 +38,13 @@ class BookingServiceTest {
         Booking booking = booking(BookingStatus.NEW);
         DataAccessException failure = new DataAccessException("Ошибка сохранения", null);
         BookingRepository repository = stub(BookingRepository.class, (proxy, method, args) -> switch (method.getName()) {
-                case "findById" -> Optional.of(booking);
-                case "update" -> {
-                    assertEquals(BookingStatus.NEW, ((Booking) args[0]).status());
-                    assertEquals(BookingStatus.CONFIRMED, args[3]);
-                    throw failure;
-                }
-                default -> throw new AssertionError("Неожиданный вызов: " + method.getName());
+            case "findById" -> Optional.of(booking);
+            case "update" -> {
+                assertEquals(BookingStatus.NEW, ((Booking) args[0]).status());
+                assertEquals(BookingStatus.CONFIRMED, args[3]);
+                throw failure;
+            }
+            default -> throw new AssertionError("Неожиданный вызов: " + method.getName());
         });
         BookingService service = service(repository, event);
 
@@ -164,17 +165,22 @@ class BookingServiceTest {
         BookingRepository repository = stub(BookingRepository.class, (proxy, method, args) -> {
             throw new AssertionError("Нет доступа к данным без права записи");
         });
-        var denied = new ru.ticketpoint.service.AccessPolicy(() -> { }, () -> {
+        var denied = new AccessPolicy(() -> {
+        }, () -> {
             throw new BookingException("Нет права записи");
         });
         BookingService service = new BookingService(repository, unusedCustomerService(),
-                new EventService(stub(EventRepository.class, (p, m, a) -> null), CLOCK), CLOCK, denied);
+                new EventService(stub(EventRepository.class, (p, m, a) -> {
+                    throw new AssertionError(m);
+                }), CLOCK), CLOCK, denied);
         assertThrows(BookingException.class,
                 () -> service.updateBooking(booking(BookingStatus.NEW), 1L, 2L, BookingStatus.NEW));
     }
 
     private CustomerService unusedCustomerService() {
-        return new CustomerService(stub(CustomerRepository.class, (p, m, a) -> null));
+        return new CustomerService(stub(CustomerRepository.class, (p, m, a) -> {
+            throw new AssertionError(m);
+        }));
     }
 
     private BookingRepository readOnlyRepository(Booking booking) {
@@ -201,6 +207,16 @@ class BookingServiceTest {
     }
 
     private static <T> T stub(Class<T> type, InvocationHandler handler) {
-        return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type}, handler));
+        return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type}, (proxy, method, args) -> {
+            if (method.getDeclaringClass() == Object.class) {
+                return switch (method.getName()) {
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "toString" -> type.getSimpleName() + " test double";
+                    default -> throw new AssertionError(method);
+                };
+            }
+            return handler.invoke(proxy, method, args);
+        }));
     }
 }

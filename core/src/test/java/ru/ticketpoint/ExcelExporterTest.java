@@ -1,26 +1,27 @@
 package ru.ticketpoint;
 
-import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.ss.usermodel.DateUtil;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import ru.ticketpoint.model.Booking;
-import ru.ticketpoint.model.BookingStatus;
-import ru.ticketpoint.model.Customer;
-import ru.ticketpoint.model.Event;
-import ru.ticketpoint.export.ExcelBookingExporter;
-
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import ru.ticketpoint.export.ExcelBookingExporter;
+import ru.ticketpoint.model.Booking;
+import ru.ticketpoint.model.BookingStatus;
+import ru.ticketpoint.model.Customer;
+import ru.ticketpoint.model.Event;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class ExcelExporterTest {
-    @TempDir Path directory;
+    @TempDir
+    Path directory;
     private final ExcelBookingExporter exporter = new ExcelBookingExporter();
 
     @Test

@@ -20,5 +20,4 @@ public record Customer(Long id, String customerCode, String name) {
         }
         return normalized;
     }
-
 }

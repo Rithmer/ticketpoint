@@ -1,12 +1,13 @@
 package ru.ticketpoint.repository;
 
+import java.sql.SQLException;
+
 import ru.ticketpoint.exception.BookingException;
 import ru.ticketpoint.exception.DataAccessException;
 
-import java.sql.SQLException;
-
 final class SqlExceptionTranslator {
-    private SqlExceptionTranslator() { }
+    private SqlExceptionTranslator() {
+    }
 
     static RuntimeException translate(String operation, SQLException error) {
         String state = error.getSQLState();

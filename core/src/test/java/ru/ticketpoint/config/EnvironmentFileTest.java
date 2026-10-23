@@ -1,16 +1,17 @@
 package ru.ticketpoint.config;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class EnvironmentFileTest {
-    @TempDir Path directory;
+    @TempDir
+    Path directory;
 
     @Test
     void readsDatabaseSettingsAndReferencesFromFile() throws Exception {

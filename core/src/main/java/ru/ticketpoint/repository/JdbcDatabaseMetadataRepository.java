@@ -1,8 +1,8 @@
 package ru.ticketpoint.repository;
 
-import ru.ticketpoint.config.ConnectionProvider;
-
 import java.util.List;
+
+import ru.ticketpoint.config.ConnectionProvider;
 
 public final class JdbcDatabaseMetadataRepository implements DatabaseMetadataRepository {
     private final JdbcQueries queries;

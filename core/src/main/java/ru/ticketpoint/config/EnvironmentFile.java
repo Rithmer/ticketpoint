@@ -6,12 +6,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class EnvironmentFile {
     private static final Pattern VARIABLE = Pattern.compile("\\$\\{([A-Z][A-Z0-9_]*)}");
 
-    private EnvironmentFile() { }
+    private EnvironmentFile() {
+    }
 
     public static Map<String, String> read(Path file, Map<String, String> environment) {
         Map<String, String> values = new HashMap<>(environment);
@@ -47,7 +49,7 @@ public final class EnvironmentFile {
                         if (replacement == null) {
                             throw new IllegalArgumentException("В .env не задана переменная " + references.group(1));
                         }
-                        references.appendReplacement(expanded, java.util.regex.Matcher.quoteReplacement(replacement));
+                        references.appendReplacement(expanded, Matcher.quoteReplacement(replacement));
                     }
                     references.appendTail(expanded);
                     value = expanded.toString();

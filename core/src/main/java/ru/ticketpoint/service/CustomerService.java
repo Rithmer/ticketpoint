@@ -1,15 +1,15 @@
 package ru.ticketpoint.service;
 
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.UUID;
+
 import ru.ticketpoint.exception.EntityNotFoundException;
 import ru.ticketpoint.model.CreateCustomerCommand;
 import ru.ticketpoint.model.Customer;
 import ru.ticketpoint.model.Validation;
 import ru.ticketpoint.repository.CustomerRepository;
-
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.UUID;
 
 public final class CustomerService {
     private final CustomerRepository customers;
@@ -33,7 +33,8 @@ public final class CustomerService {
     }
 
     public Customer update(long id, CreateCustomerCommand command) {
-        access.admin(); findById(id);
+        access.admin();
+        findById(id);
         return customers.update(id, command);
     }
 
@@ -44,7 +45,7 @@ public final class CustomerService {
 
     public List<Customer> findAll() {
         access.read().run();
-        return access.personal() ? java.util.List.of(findById(access.customerId())) : customers.findAll();
+        return access.personal() ? List.of(findById(access.requireCustomerId())) : customers.findAll();
     }
 
     public Customer findById(long id) {

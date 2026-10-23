@@ -1,15 +1,16 @@
 package ru.ticketpoint.ui;
 
+import java.time.format.DateTimeFormatter;
+
 import ru.ticketpoint.model.Booking;
 import ru.ticketpoint.model.Customer;
 import ru.ticketpoint.model.Event;
 
-import java.time.format.DateTimeFormatter;
-
 public final class ConsoleFormatter {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.uuuu HH:mm");
 
-    private ConsoleFormatter() { }
+    private ConsoleFormatter() {
+    }
 
     public static String format(Object item) {
         if (item instanceof Booking booking) {
@@ -24,9 +25,9 @@ public final class ConsoleFormatter {
         if (item instanceof Customer(Long id, String code, String name)) {
             return "Клиент #%s: %s [%s]".formatted(id, name, code);
         }
-        if (item instanceof Event(Long id, String title, String venue, java.time.LocalDateTime startsAt, java.math.BigDecimal price)) {
-            return "Мероприятие #%s: %s | %s | %s | %s руб.".formatted(id, title,
-                    venue, DATE.format(startsAt), price.toPlainString());
+        if (item instanceof Event event) {
+            return "Мероприятие #%s: %s | %s | %s | %s руб.".formatted(event.id(), event.title(),
+                    event.venue(), DATE.format(event.startsAt()), event.price().toPlainString());
         }
         if (item instanceof String text) {
             return text;

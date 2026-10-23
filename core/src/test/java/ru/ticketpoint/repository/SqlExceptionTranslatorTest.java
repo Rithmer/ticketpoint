@@ -1,13 +1,13 @@
 package ru.ticketpoint.repository;
 
+import java.sql.SQLException;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ru.ticketpoint.exception.BookingException;
 import ru.ticketpoint.exception.DataAccessException;
-
-import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.*;
 

@@ -1,12 +1,12 @@
 package ru.ticketpoint.config;
 
-import org.jetbrains.annotations.NotNull;
-
-import java.time.DateTimeException;
 import java.nio.file.Path;
+import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.Map;
 import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 public record DatabaseConfig(String url, String user, String password, ZoneId zone,
                              int connectTimeoutSeconds, int statementTimeoutSeconds,

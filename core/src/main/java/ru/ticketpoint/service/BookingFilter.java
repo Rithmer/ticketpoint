@@ -1,10 +1,10 @@
 package ru.ticketpoint.service;
 
-import ru.ticketpoint.model.Booking;
-import ru.ticketpoint.model.BookingStatus;
-
 import java.time.LocalDate;
 import java.util.Locale;
+
+import ru.ticketpoint.model.Booking;
+import ru.ticketpoint.model.BookingStatus;
 
 public record BookingFilter(String query, BookingStatus status, Long customerId, Long eventId,
                             LocalDate from, LocalDate to) {

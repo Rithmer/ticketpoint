@@ -1,5 +1,12 @@
 package ru.ticketpoint;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.sql.SQLException;
+import java.util.Scanner;
+
 import ru.ticketpoint.config.AppLogging;
 import ru.ticketpoint.config.ApplicationServices;
 import ru.ticketpoint.config.DatabaseConfig;
@@ -7,14 +14,9 @@ import ru.ticketpoint.exception.BookingException;
 import ru.ticketpoint.exception.DataAccessException;
 import ru.ticketpoint.ui.ConsoleUi;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
-import java.util.Scanner;
-
 public final class ConsoleApplication {
-    private ConsoleApplication() { }
+    private ConsoleApplication() {
+    }
 
     public static void main(String[] args) {
         int code = run(args, new Scanner(System.in), new PrintWriter(System.out, true),
@@ -84,7 +86,7 @@ public final class ConsoleApplication {
             }
             return 0;
         } catch (BookingException | IllegalArgumentException e) {
-            if (e.getCause() instanceof java.sql.SQLException) {
+            if (e.getCause() instanceof SQLException) {
                 AppLogging.technical("Выполнение команды", e);
             }
             errors.println("Ошибка: " + e.getMessage());
@@ -93,7 +95,7 @@ public final class ConsoleApplication {
             AppLogging.technical("Выполнение команды", e);
             errors.println("Ошибка базы данных: " + e.getMessage());
             return 1;
-        } catch (IOException | java.sql.SQLException | RuntimeException e) {
+        } catch (IOException | SQLException | RuntimeException e) {
             AppLogging.technical("Выполнение команды", e);
             errors.println("Не удалось выполнить команду. Подробности в журнале.");
             return 1;

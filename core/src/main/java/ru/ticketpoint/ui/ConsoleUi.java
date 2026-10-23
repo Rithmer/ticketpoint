@@ -1,5 +1,16 @@
 package ru.ticketpoint.ui;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Path;
+import java.sql.SQLException;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Objects;
+import java.util.Scanner;
+
 import ru.ticketpoint.config.AppLogging;
 import ru.ticketpoint.exception.BookingException;
 import ru.ticketpoint.exception.DataAccessException;
@@ -10,16 +21,6 @@ import ru.ticketpoint.service.BookingService;
 import ru.ticketpoint.service.CustomerService;
 import ru.ticketpoint.service.DatabaseMetadataService;
 import ru.ticketpoint.service.EventService;
-
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Path;
-import java.time.Clock;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Objects;
-import java.util.Scanner;
 
 public final class ConsoleUi {
     private static final DateTimeFormatter EXPORT_TIMESTAMP = DateTimeFormatter.ofPattern("uuuuMMdd-HHmmss-SSS");
@@ -186,7 +187,7 @@ public final class ConsoleUi {
             try {
                 action.run(command);
             } catch (BookingException | IllegalArgumentException e) {
-                if (e.getCause() instanceof java.sql.SQLException) {
+                if (e.getCause() instanceof SQLException) {
                     AppLogging.technical("Операция меню: " + title, e);
                 }
                 output.println("Ошибка: " + e.getMessage());
@@ -220,5 +221,4 @@ public final class ConsoleUi {
     private interface Action {
         void run(String command) throws IOException;
     }
-
 }
