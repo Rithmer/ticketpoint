@@ -21,11 +21,11 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> summary() {
-        var user = current.get();
+        var user = current.optional().orElse(null);
         var all =
                 bookings.findAll(
                         (r, q, cb) ->
-                                user.getRole().equals("USER")
+                                user != null && user.getRole().equals("USER")
                                         ? (user.getCustomerId() == null
                                         ? cb.disjunction()
                                         : cb.equal(r.get("customer").get("id"), user.getCustomerId()))

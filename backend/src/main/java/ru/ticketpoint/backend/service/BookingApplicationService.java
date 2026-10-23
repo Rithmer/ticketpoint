@@ -58,17 +58,17 @@ public class BookingApplicationService {
 
     public Booking require(UUID id) {
         var b = bookings.findByPublicId(id).orElseThrow(ApiException::missing);
-        var u = current.get();
-        if (u.getRole().equals("USER") && !Objects.equals(u.getCustomerId(), b.getCustomer().getId()))
+        var u = current.optional().orElse(null);
+        if (u != null && u.getRole().equals("USER") && !Objects.equals(u.getCustomerId(), b.getCustomer().getId()))
             throw ApiException.missing();
         return b;
     }
 
     private Specification<Booking> scope(
             BookingSearch.Filter filter) {
-        var u = current.get();
+        var u = current.optional().orElse(null);
         Specification<Booking> spec = BookingSearch.spec(filter);
-        if (u.getRole().equals("USER"))
+        if (u != null && u.getRole().equals("USER"))
             spec =
                     spec.and(
                             (r, q, cb) ->

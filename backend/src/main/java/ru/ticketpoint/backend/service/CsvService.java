@@ -137,7 +137,7 @@ public class CsvService {
                     if (old != null && mode.equals("NEW_ONLY"))
                         throw ApiException.bad("Билет с таким номером уже существует.");
                     var status = parseStatus(value(record, legacyHeaders, "status", "Статус"));
-                    String vip = value(record, legacyHeaders, "vip", "Особая отметка").trim();
+                    String vip = value(record, legacyHeaders, "vip", "VIP").trim();
                     if (!Set.of("true", "false", "да", "нет").contains(vip.toLowerCase(Locale.ROOT)))
                         throw ApiException.bad("В столбце «VIP» укажите «Да» или «Нет».");
                     Set<String> tags =

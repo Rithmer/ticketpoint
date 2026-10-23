@@ -1,5 +1,6 @@
 package ru.ticketpoint.backend.security;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,9 +18,13 @@ public class CurrentUser {
     }
 
     public UserAccount get() {
+        return optional().orElseThrow(ApiException::unauthorized);
+    }
+
+    public Optional<UserAccount> optional() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof UUID id))
-            throw ApiException.unauthorized();
-        return users.findByPublicId(id).orElseThrow(ApiException::unauthorized);
+            return Optional.empty();
+        return users.findByPublicId(id);
     }
 }

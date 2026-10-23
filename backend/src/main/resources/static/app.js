@@ -160,7 +160,10 @@ function signedOut() {
 
 async function signedIn() {
     /** @type {{name: string, role: string, passwordChangeRequired: boolean}} */
-    const u = state.tokens.user;
+    const u = state.tokens?.user ?? {name: "Гость", role: "VIEWER", passwordChangeRequired: false};
+    state.page = 0;
+    byId("passwordButton").hidden = !state.tokens;
+    byId("logoutButton").textContent = state.tokens ? "Выйти" : "Войти / зарегистрироваться";
     byId("identity").textContent = u.name + " · " + roles[u.role];
     byId("bookingsHeading").textContent = buyer() ? "Мои билеты" : "Бронирования";
     byId("newBooking").textContent = buyer() ? "Забронировать билет" : "Создать бронирование";
@@ -238,6 +241,7 @@ byId("passwordButton").onclick = () => {
     byId("passwordPanel").hidden = !byId("passwordPanel").hidden;
 };
 byId("logoutButton").onclick = async () => {
+    if (!state.tokens) { signedOut(); return; }
     try {
         await api("/auth/logout", {
             method: "POST",
@@ -246,14 +250,15 @@ byId("logoutButton").onclick = async () => {
     } catch (ex) {
         message(ex.message);
     } finally {
-        signedOut();
+        state.tokens = null;
+        await signedIn();
     }
 };
 
 async function loadReferences() {
     [state.events, state.customers] = await Promise.all([
         api("/events"),
-        api("/customers"),
+        state.tokens ? api("/customers") : Promise.resolve([]),
     ]);
     byId("eventFilter").innerHTML =
         '<option value="">Все</option>' +
@@ -311,7 +316,7 @@ async function loadBookings() {
         data.content
             .map(
                 (b) =>
-                    `<tr><td><input type="checkbox" data-select="${b.id}" aria-label="Выбрать ${esc(b.ticketNumber)}"></td><td>${esc(b.ticketNumber)}<small>${esc(b.customerName)}</small><small>${b.tags.map(esc).join(" · ")}${b.vip ? " · VIP" : ""}</small></td><td>${esc(b.eventTitle)}</td><td>${esc(statuses[b.status])}</td><td>${esc(b.price)} ₽</td><td>${priorities[b.priority]}</td><td><button data-action="notes" data-id="${b.id}" class="secondary">Заметки</button>${(write() || buyer() && !b.archived && ["NEW", "CONFIRMED"].includes(b.status)) ? `<button data-action="edit" data-id="${b.id}">${buyer() && b.status === "CONFIRMED" ? "Отменить" : "Изменить"}</button>${write() || b.status === "NEW" ? `<button data-action="${b.archived ? "restore" : "archive"}" data-id="${b.id}" class="secondary">${b.archived ? "Восстановить" : "В архив"}</button>` : ""}` : ""}${admin() && b.archived ? `<button data-action="delete" data-id="${b.id}" class="secondary">Удалить навсегда</button>` : ""}</td></tr>`,
+                    `<tr><td><input type="checkbox" data-select="${b.id}" aria-label="Выбрать ${esc(b.ticketNumber)}"></td><td>${esc(b.ticketNumber)}<small>${esc(b.customerName)}</small><small>${b.tags.map(esc).join(" · ")}${b.vip ? " · VIP" : ""}</small></td><td>${esc(b.eventTitle)}</td><td>${esc(statuses[b.status])}</td><td>${esc(b.price)} ₽</td><td>${priorities[b.priority]}</td><td>${state.tokens ? `<button data-action="notes" data-id="${b.id}" class="secondary">Заметки</button>` : ""}${(write() || buyer() && !b.archived && ["NEW", "CONFIRMED"].includes(b.status)) ? `<button data-action="edit" data-id="${b.id}">${buyer() && b.status === "CONFIRMED" ? "Отменить" : "Изменить"}</button>${write() || b.status === "NEW" ? `<button data-action="${b.archived ? "restore" : "archive"}" data-id="${b.id}" class="secondary">${b.archived ? "Восстановить" : "В архив"}</button>` : ""}` : ""}${admin() && b.archived ? `<button data-action="delete" data-id="${b.id}" class="secondary">Удалить навсегда</button>` : ""}</td></tr>`,
             )
             .join("") || '<tr><td colspan="7">Билетов пока нет. Откройте «Мероприятия» и выберите, куда хотите пойти, или измените фильтры.</td></tr>';
     byId("pageInfo").textContent =
@@ -826,3 +831,6 @@ byId("copyToken").onclick = async () => {
         message("Не удалось скопировать ключ доступа. Попробуйте ещё раз.");
     }
 };
+
+byId("guestButton").onclick = () => signedIn().catch(ex => message(ex.message));
+void signedIn().catch(ex => message(ex.message));

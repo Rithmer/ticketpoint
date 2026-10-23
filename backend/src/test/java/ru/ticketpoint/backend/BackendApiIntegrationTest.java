@@ -75,6 +75,7 @@ class BackendApiIntegrationTest {
     @Test
     void jdbcRespectsDisabledEventsAndArchivesInsteadOfDeleting() throws Exception {
         var event = createEvent();
+        bookingInput(event.get("id").asString()); // Create a customer independently of demo data.
         long eventId;
         long customerId;
         try (var c = dataSource.getConnection(); var s = c.createStatement()) {
@@ -352,13 +353,37 @@ class BackendApiIntegrationTest {
     }
 
     @Test
+    void guestCanSearchAndReadButCannotMutateOrReadPrivateEndpoints() throws Exception {
+        var event = createEvent();
+        var input = bookingInput(event.get("id").asString());
+        var created = data(mvc.perform(post("/api/bookings")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType("application/json").content(json.writeValueAsString(input)))
+                .andExpect(status().isCreated()).andReturn());
+        String id = created.get("id").asString();
+        mvc.perform(get("/api/bookings").param("q", created.get("ticketNumber").asString())
+                .param("status", "NEW").param("sort", "price").param("direction", "desc"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1));
+        mvc.perform(get("/api/bookings/" + id)).andExpect(status().isOk());
+        mvc.perform(get("/api/events")).andExpect(status().isOk());
+        mvc.perform(get("/api/analytics/summary")).andExpect(status().isOk());
+        mvc.perform(post("/api/bookings").contentType("application/json")
+                .content(json.writeValueAsString(input))).andExpect(status().isUnauthorized());
+        mvc.perform(put("/api/bookings/" + id).contentType("application/json")
+                .content(json.writeValueAsString(input))).andExpect(status().isUnauthorized());
+        mvc.perform(delete("/api/bookings/" + id)).andExpect(status().isUnauthorized());
+        for (String path : List.of("/api/customers", "/api/admin/users", "/api/bookings/" + id + "/notes"))
+            mvc.perform(get(path)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void contextHealthMigrationsAndRoleBoundaries() throws Exception {
         mvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
         mvc.perform(get("/api/bookings"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.correlationId").isString());
+                .andExpect(status().isOk())
+                .andExpect(header().exists("X-Correlation-ID"));
         mvc.perform(
                         get("/api/bookings")
                                 .header("Authorization", "Bearer " + viewerToken)

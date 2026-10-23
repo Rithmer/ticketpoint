@@ -16,7 +16,7 @@
 </header>
 <main>
     <div id="message" role="status" aria-live="polite"></div>
-    <section id="login">
+    <section id="login" hidden>
         <h1>Вход в систему</h1>
         <p>Войдите в свою учётную запись.</p>
         <form id="loginForm">
@@ -32,6 +32,7 @@
             <button>Войти</button>
         </form>
         <button id="showRegistration" type="button" class="secondary">Нет аккаунта? Зарегистрироваться</button>
+        <button id="guestButton" type="button" class="secondary">Смотреть бронирования без входа</button>
     </section>
     <section id="registration" hidden>
         <h1>Создать аккаунт</h1>

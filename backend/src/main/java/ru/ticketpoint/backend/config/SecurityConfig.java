@@ -10,6 +10,7 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import java.util.*;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.*;
 import org.springframework.security.config.Customizer;
@@ -39,6 +40,9 @@ public class SecurityConfig {
                                                 "/style.css",
                                                 "/favicon.ico",
                                                 "/actuator/health")
+                                        .permitAll()
+                                        .requestMatchers(HttpMethod.GET, "/api/bookings", "/api/bookings/{id}", "/api/bookings/export",
+                                                "/api/events", "/api/analytics/summary")
                                         .permitAll()
                                         .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/register")
                                         .permitAll()
