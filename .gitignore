@@ -8,7 +8,9 @@
 !.idea/scopes/**
 !.idea/sqlDataSources.xml
 !.idea/sqldialects.xml
+!.idea/jpa-buddy-datasource.xml
 *.iml
+!backend/backend.iml
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
