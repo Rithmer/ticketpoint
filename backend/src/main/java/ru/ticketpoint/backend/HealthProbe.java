@@ -7,12 +7,17 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 
 public final class HealthProbe {
-    private HealthProbe() { }
+    private HealthProbe() {
+    }
+
     public static void main(String[] args) throws Exception {
-        var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
-        var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:8080/actuator/health"))
-                .timeout(Duration.ofSeconds(3)).GET().build();
-        var response = client.send(request, HttpResponse.BodyHandlers.discarding());
-        if (response.statusCode() != 200) System.exit(1);
+        int status;
+        try (var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build()) {
+            var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:8080/actuator/health"))
+                    .timeout(Duration.ofSeconds(3)).GET().build();
+            var response = client.send(request, HttpResponse.BodyHandlers.discarding());
+            status = response.statusCode();
+        }
+        if (status != 200) System.exit(1);
     }
 }

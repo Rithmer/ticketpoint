@@ -1,308 +1,829 @@
-'use strict';
-const $ = id => document.getElementById(id);
-const statuses = {NEW: 'Новое', CONFIRMED: 'Подтверждено', PAID: 'Оплачено', CANCELLED: 'Отменено'};
-let catalogCustomers = [], catalogEvents = [];
-let bookings = [];
-let busy = false;
-let currentUser = null;
-let csrfToken = null;
-const roles = {ADMIN: "Администратор", MANAGER: "Менеджер", USER: "Пользователь"};
-const date = value => new Intl.DateTimeFormat('ru-RU', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-}).format(new Date(value));
+"use strict";
+const byId = (id) => document.getElementById(id),
+    esc = (s) =>
+        String(s ?? "").replace(
+            /[&<>"']/g,
+            (c) =>
+                ({
+                    "&": "&amp;",
+                    "<": "&lt;",
+                    ">": "&gt;",
+                    '"': "&quot;",
+                    "'": "&#39;",
+                })[c],
+        );
+/** @type {{tokens: any, page: number, userPage: number, auditPage: number, events: any[], customers: any[], bookings: any[], preview: any, tab: string}} */
+const state = {
+    tokens: null,
+    page: 0,
+    userPage: 0,
+    auditPage: 0,
+    events: [],
+    customers: [],
+    bookings: [],
+    preview: null,
+    tab: "bookings",
+};
+const statuses = {NEW: "Новое", CONFIRMED: "Подтверждено", PAID: "Оплачено", CANCELLED: "Отменено"};
+const priorities = {LOW: "Обычный", MEDIUM: "Средний", HIGH: "Высокий"};
+const roles = {USER: "Покупатель", VIEWER: "Наблюдатель", MANAGER: "Менеджер", ADMIN: "Администратор"};
+const buyer = () => state.tokens?.user.role === "USER";
+const availableEvents = () => state.events.filter(e => e.available);
+const textValue = value => statuses[value] || priorities[value] || roles[value] || value;
+const formatDate = value => value ? new Intl.DateTimeFormat("ru-RU", /** @type {Intl.DateTimeFormatOptions} */ ({
+    dateStyle: "medium",
+    timeStyle: "short"
+})).format(new Date(value)) : "—";
+const fieldNames = {
+    login: "Логин",
+    name: "Имя",
+    password: "Пароль",
+    confirmation: "Повтор пароля",
+    currentPassword: "Текущий пароль",
+    newPassword: "Новый пароль",
+    temporaryPassword: "Временный пароль",
+    customerId: "Покупатель",
+    eventId: "Мероприятие",
+    status: "Статус",
+    title: "Название",
+    venue: "Место проведения",
+    startsAt: "Начало",
+    price: "Цена",
+    description: "Описание",
+    tags: "Метки",
+    body: "Заметка"
+};
+const auditNames = {
+    LOGIN_SUCCESS: "Вход в аккаунт",
+    LOGIN_FAILED: "Неудачная попытка входа",
+    LOGOUT: "Выход из аккаунта",
+    USER_REGISTERED: "Регистрация покупателя",
+    USER_CREATED: "Создание пользователя",
+    USER_UPDATED: "Изменение пользователя",
+    PASSWORD_CHANGED: "Смена пароля",
+    PASSWORD_RESET: "Сброс пароля",
+    REFRESH_REUSE: "Повторное использование сеанса",
+    BOOKING_CREATED: "Создание бронирования",
+    BOOKING_UPDATED: "Изменение бронирования",
+    BOOKING_ARCHIVED: "Архивирование",
+    BOOKING_RESTORED: "Восстановление",
+    BOOKING_DELETED: "Окончательное удаление",
+    EVENT_CREATED: "Создание мероприятия",
+    EVENT_UPDATED: "Изменение мероприятия",
+    CUSTOMER_CREATED: "Создание профиля покупателя",
+    NOTE_SAVED: "Сохранение заметки",
+    NOTE_DELETED: "Удаление заметки",
+    BOOKING_BULK_ARCHIVE: "Массовое архивирование",
+    BOOKING_BULK_RESTORE: "Массовое восстановление",
+    BOOKING_BULK_SET_STATUS: "Массовое изменение статуса",
+    BOOKING_BULK_ADD_TAG: "Добавление метки",
+    BOOKING_BULK_REMOVE_TAG: "Удаление метки"
+};
+const entityNames = {BOOKING: "Бронирование", USER: "Пользователь", EVENT: "Мероприятие"};
+const write = () => ["ADMIN", "MANAGER"].includes(state.tokens?.user.role),
+    admin = () => state.tokens?.user.role === "ADMIN";
+byId("apiDocs").href = "/swagger-ui.html";
 
-function message(text, error = false) {
-    $('message').textContent = text;
-    const dialogError = document.querySelector('dialog[open] .editor-error');
-    if (dialogError) dialogError.textContent = error ? text : '';
-    $('message').classList.toggle('error', error);
+function message(text) {
+    byId("message").textContent = text;
 }
 
-async function api(path, method = 'GET', body) {
-    let response;
-    try { response = await fetch('/api/' + path, {
-        method,
-        headers: {'Content-Type': 'application/json', ...(csrfToken ? {'X-CSRF-Token': csrfToken} : {})},
-        body: body === undefined ? undefined : JSON.stringify(body)
-    }); } catch (error) { throw new Error('Нет соединения с сервером. Проверьте подключение и повторите действие.'); }
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        if (response.status === 401 && (!path.startsWith('auth/') || /^(Сеанс|Войдите)/.test(error.message || ''))) setSession({user: null, csrfToken});
-        throw new Error(error.message || 'Не удалось выполнить запрос.');
-    }
-    return response.status === 204 ? null : response.json();
-}
-
-function options(id, values, label, empty) {
-    const previous = $(id).value;
-    $(id).replaceChildren(new Option(empty, ''), ...values.map(value => new Option(label(value), value.id)));
-    if ([...$(id).options].some(option => option.value === previous)) $(id).value = previous;
-}
-
-function textNode(tag, text) {
-    const node = document.createElement(tag);
-    node.textContent = text;
-    return node;
-}
-
-function render() {
-    const query = $('search').value.trim().toLocaleLowerCase('ru');
-    const visible = bookings.filter(b => (!query || [b.ticketNumber, b.customer.name, b.customer.customerCode, b.event.title, b.event.venue].some(v => v.toLocaleLowerCase('ru').includes(query))) && (!$('filter-status').value || b.status === $('filter-status').value) && (!$('filter-event').value || String(b.event.id) === $('filter-event').value));
-    $('count').textContent = `Показано ${visible.length} из ${bookings.length}`;
-    $('bookings').replaceChildren(...visible.map(b => {
-        const row = document.createElement('tr');
-        [b.ticketNumber, b.customer.name, b.event.title, date(b.event.startsAt), b.priceAtBooking, statuses[b.status]].forEach(value => row.append(textNode('td', value)));
-        const actions = document.createElement('td');
-        const personal = currentUser.role === 'USER';
-        const future = new Date(b.event.startsAt) > new Date();
-        const transitions = personal
-            ? (future && ['NEW', 'CONFIRMED'].includes(b.status) ? ['CANCELLED'] : [])
-            : ({NEW: ['CONFIRMED', 'CANCELLED'], CONFIRMED: ['PAID', 'NEW', 'CANCELLED'], PAID: ['CANCELLED']}[b.status] || []);
-        for (const next of transitions) {
-            const button = textNode('button', {CONFIRMED: 'Подтвердить', PAID: 'Отметить оплату', NEW: 'Вернуть на исправление', CANCELLED: 'Отменить'}[next]);
-            button.className = 'secondary'; button.disabled = busy;
-            button.onclick = () => {
-                if (next === 'CANCELLED' && !confirm('Отменить этот билет? Если он оплачен, возврат оформляется отдельно.')) return;
-                perform(() => api(`bookings/${b.id}/status`, 'PATCH', {status: next}));
-            };
-            actions.append(button);
-        }
-        if (b.status === 'NEW' && future) {
-            const edit = textNode('button', 'Изменить заявку'); edit.disabled = busy;
-            edit.onclick = () => showEditor('Изменить заявку', [
-                ...(!personal ? [{key: 'customerId', label: 'Клиент', value: b.customer.id, options: catalogCustomers.map(c => [c.id, c.name])}] : []),
-                {key: 'eventId', label: 'Мероприятие (при замене применяется его текущая цена)', value: b.event.id,
-                    options: catalogEvents.filter(e => new Date(e.startsAt) > new Date()).map(e => [e.id, `${e.title} • ${e.price} ₽`])}
-            ], values => api(`bookings/${b.id}`, 'PUT', {expected: b, customerId: personal ? currentUser.customerId : Number(values.customerId), eventId: Number(values.eventId), status: b.status}));
-            actions.append(edit);
-        }
-        if (b.status === 'NEW' || !personal && b.status === 'CANCELLED') {
-            const remove = textNode('button', 'Удалить'); remove.className = 'danger'; remove.disabled = busy;
-            remove.onclick = () => { if (confirm(`Удалить билет ${b.ticketNumber}?`)) perform(() => api(`bookings/${b.id}`, 'DELETE')); };
-            actions.append(remove);
-        }
-        row.append(actions);
-        return row;
-    }));
-}
-
-async function load() {
-    const [rows, customers, events, stats] = await Promise.all(['bookings', 'customers', 'events', 'statistics'].map(path => api(path)));
-    bookings = rows;
-    catalogCustomers = customers; catalogEvents = events;
-    const personal = currentUser.role === 'USER';
-    options('customer', customers, c => `${c.name} • ${c.customerCode}`, 'Выберите клиента');
-    if (personal) $('customer').value = String(currentUser.customerId);
-    $('customer').disabled = personal; $('customer').parentElement.hidden = personal;
-    options('event', events.filter(e => new Date(e.startsAt) > new Date()), e => `${e.title} • ${date(e.startsAt)}`, 'Выберите мероприятие');
-    options('filter-event', events, e => e.title, 'Все мероприятия');
-    $('customers').replaceChildren(...customers.map(c => {
-        const row = textNode('li', `${c.name} • ${c.customerCode}`);
-        if (currentUser.role === 'ADMIN') addCatalogActions(row, 'customers', c, [{key: 'name', label: 'Имя клиента', value: c.name, maxLength: 120}]);
-        return row;
-    }));
-    $('events').replaceChildren(...events.map(e => {
-        const row = textNode('li', `${e.title} • ${e.venue} • ${date(e.startsAt)} • ${e.price} ₽`);
-        if (personal && new Date(e.startsAt) > new Date()) {
-            const reserve = textNode('button', 'Забронировать');
-            reserve.onclick = () => perform(() => api('bookings', 'POST', {customerId: currentUser.customerId, eventId: e.id}));
-            row.append(reserve);
-        }
-        if (currentUser.role === 'ADMIN') addCatalogActions(row, 'events', e, [
-            {key: 'title', label: 'Название', value: e.title, maxLength: 200}, {key: 'venue', label: 'Место', value: e.venue, maxLength: 200},
-            {key: 'startsAt', label: 'Дата и время (Europe/Moscow)', type: 'datetime-local', value: e.startsAt.slice(0, 16)},
-            {key: 'price', label: 'Цена', type: 'number', value: e.price, min: 0, max: 9999999999.99, step: '0.01'}]);
-        return row;
-    }));
-    const values = [['Всего', stats.total], ['Новые', stats.newBookings], ['Подтверждённые', stats.confirmed], ['Оплаченные', stats.paid], ['Отменённые', stats.cancelled], ['От 5 000 ₽', stats.expensiveTickets], ['Доля оплаченных', (stats.total ? 100 * stats.paid / stats.total : 0).toFixed(1) + ' %']];
-    $('statistics').replaceChildren(...values.map(([label, value]) => {
-        const card = textNode('div', label);
-        card.className = 'card';
-        card.append(textNode('strong', value));
-        return card;
-    }));
-    if (currentUser.role === 'ADMIN') await loadUsers();
-    render();
-}
-
-async function perform(action, form) {
-    if (busy) return;
-    busy = true;
-    document.querySelectorAll('button').forEach(button => button.disabled = true);
-    message('Выполнение…');
-    let saved = false;
+/** @returns {Promise<any>} */
+async function api(
+    path,
+    {method = "GET", body, headers = {}, raw = false, retry = true} = {},
+) {
+    const h = {...headers};
+    if (state.tokens && !["/auth/login", "/auth/refresh"].includes(path))
+        h.Authorization = "Bearer " + state.tokens.accessToken;
+    if (body !== undefined && !(body instanceof FormData))
+        h["Content-Type"] = "application/json";
+    let r;
     try {
-        await action();
-        saved = true;
-        if (form) form.reset();
-        if (currentUser && !currentUser.passwordChangeRequired) await load();
-        message(currentUser ? (currentUser.passwordChangeRequired ? 'Вход выполнен. Смените временный пароль.' : 'Данные обновлены.') : '');
-    } catch (error) {
-        message((saved ? 'Операция выполнена, но обновить список не удалось. ' : '') + error.message, true);
+        r = await fetch("/api" + path, {
+            method,
+            headers: h,
+            body:
+                body === undefined
+                    ? undefined
+                    : body instanceof FormData
+                        ? body
+                        : JSON.stringify(body),
+        });
+    } catch {
+        throw new Error("Нет соединения с сервером. Проверьте интернет и попробуйте ещё раз.");
+    }
+    if (r.status === 401 && state.tokens && retry && !path.startsWith("/auth/")) {
+        try {
+            state.tokens = await api("/auth/refresh", {
+                method: "POST",
+                body: {refreshToken: state.tokens.refreshToken},
+                retry: false,
+            });
+            return api(path, {method, body, headers, raw, retry: false});
+        } catch (e) {
+            signedOut();
+            throw e;
+        }
+    }
+    if (!r.ok) {
+        const data = await r
+            .json()
+            .catch(() => ({message: "Не удалось выполнить действие. Попробуйте ещё раз."}));
+        throw new Error(
+            data.message +
+            (Object.keys(data.fields || {}).length
+                ? "\n" +
+                Object.entries(data.fields)
+                    .map(([k, v]) => (fieldNames[k.split(".").pop()] || "Поле формы") + ": " + v)
+                    .join("\n")
+                : ""),
+        );
+    }
+    return r.status === 204 ? null : raw ? r.text() : r.json();
+}
+
+function visibility() {
+    document.querySelectorAll(".admin").forEach((e) => (e.hidden = !admin()));
+    document.querySelectorAll(".writer").forEach((e) => (e.hidden = !write()));
+}
+
+function signedOut() {
+    state.tokens = null;
+    state.preview = null;
+    byId("workspace").hidden = true;
+    byId("passwordPanel").hidden = true;
+    byId("login").hidden = false;
+    byId("registration").hidden = true;
+    byId("identity").textContent = "";
+    byId("loginForm").reset();
+}
+
+async function signedIn() {
+    /** @type {{name: string, role: string, passwordChangeRequired: boolean}} */
+    const u = state.tokens.user;
+    byId("identity").textContent = u.name + " · " + roles[u.role];
+    byId("bookingsHeading").textContent = buyer() ? "Мои билеты" : "Бронирования";
+    byId("newBooking").textContent = buyer() ? "Забронировать билет" : "Создать бронирование";
+    byId("newBooking").hidden = !write() && !buyer();
+    byId("registration").hidden = true;
+    byId("login").hidden = true;
+    byId("passwordPanel").hidden = !u.passwordChangeRequired;
+    byId("workspace").hidden = u.passwordChangeRequired;
+    if (!u.passwordChangeRequired) {
+        await loadReferences();
+        visibility();
+        await tab("bookings");
+    } else message("Для продолжения замените временный пароль.");
+}
+
+byId("loginForm").onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+        state.tokens = await api("/auth/login", {
+            method: "POST",
+            body: Object.fromEntries(new FormData(e.target)),
+        });
+        e.target.reset();
+        message("");
+        await signedIn();
+    } catch (ex) {
+        message(ex.message);
+    }
+};
+byId("showRegistration").onclick = () => {
+    byId("login").hidden = true;
+    byId("registration").hidden = false;
+    message("");
+};
+byId("showLogin").onclick = () => {
+    byId("registration").hidden = true;
+    byId("login").hidden = false;
+    message("");
+};
+byId("registrationForm").onsubmit = async e => {
+    e.preventDefault();
+    const body = Object.fromEntries(new FormData(e.target));
+    if (body.password !== body.confirmation) {
+        message("Пароли не совпадают. Повторите пароль ещё раз.");
+        return;
+    }
+    const submit = e.target.querySelector('[type="submit"]');
+    submit.disabled = true;
+    try {
+        state.tokens = await api("/auth/register", {method: "POST", body});
+        e.target.reset();
+        message("");
+        await signedIn();
+    } catch (ex) {
+        message(ex.message);
     } finally {
-        busy = false;
-        document.querySelectorAll('button').forEach(button => button.disabled = false);
-        ['customer-form', 'event-form'].forEach(id => $(id).querySelectorAll('button').forEach(button => button.disabled = !currentUser || currentUser.role !== 'ADMIN'));
-        render();
+        submit.disabled = false;
+    }
+};
+byId("passwordForm").onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+        await api("/auth/password", {
+            method: "POST",
+            body: Object.fromEntries(new FormData(e.target)),
+        });
+        e.target.reset();
+        signedOut();
+        message("Пароль изменён. Войдите с новым паролем.");
+    } catch (ex) {
+        message(ex.message);
+    }
+};
+byId("passwordButton").onclick = () => {
+    byId("passwordPanel").hidden = !byId("passwordPanel").hidden;
+};
+byId("logoutButton").onclick = async () => {
+    try {
+        await api("/auth/logout", {
+            method: "POST",
+            body: {refreshToken: state.tokens.refreshToken},
+        });
+    } catch (ex) {
+        message(ex.message);
+    } finally {
+        signedOut();
+    }
+};
+
+async function loadReferences() {
+    [state.events, state.customers] = await Promise.all([
+        api("/events"),
+        api("/customers"),
+    ]);
+    byId("eventFilter").innerHTML =
+        '<option value="">Все</option>' +
+        state.events
+            .map(
+                (e) =>
+                    `<option value="${e.id}">${esc(e.title)}${e.active ? "" : " (отключено)"}</option>`,
+            )
+            .join("");
+}
+
+async function tab(name) {
+    state.tab = name;
+    for (const id of ["bookings", "events", "analytics", "users", "audit"])
+        byId(id).hidden = id !== name;
+    try {
+        if (name === "bookings") await loadBookings();
+        if (name === "events") await loadEvents();
+        if (name === "analytics") await loadAnalytics();
+        if (name === "users") await loadUsers();
+        if (name === "audit") await loadAudit();
+    } catch (ex) {
+        message(ex.message);
     }
 }
 
-$('search').oninput = render;
-$('filter-status').onchange = render;
-$('filter-event').onchange = render;
-$('refresh').onclick = () => perform(() => Promise.resolve());
-$('booking-form').onsubmit = e => {
-    e.preventDefault();
-    perform(() => api('bookings', 'POST', {
-        customerId: currentUser.role === 'USER' ? currentUser.customerId : Number($('customer').value),
-        eventId: Number($('event').value)
-    }), e.target);
-};
-$('customer-form').onsubmit = e => {
-    e.preventDefault();
-    perform(() => api('customers', 'POST', {name: $('customer-name').value}), e.target);
-};
-$('event-form').onsubmit = e => {
-    e.preventDefault();
-    perform(() => api('events', 'POST', {
-        title: $('event-title').value,
-        venue: $('event-venue').value,
-        startsAt: $('event-date').value,
-        price: $('event-price').value
-    }), e.target);
-};
-function setSession(session) {
-    currentUser = session.user;
-    csrfToken = session.csrfToken;
-    $('auth-panel').hidden = Boolean(currentUser);
-    $('account-panel').hidden = !currentUser;
-    $('workspace').hidden = !currentUser || currentUser.passwordChangeRequired;
-    $('users-panel').hidden = !currentUser || currentUser.role !== 'ADMIN';
-    $('customer-section').hidden = Boolean(currentUser && currentUser.role === 'USER');
-    ['customer-form', 'event-form'].forEach(id => $(id).hidden = !currentUser || currentUser.role !== 'ADMIN');
-    $('booking-heading').textContent = currentUser && currentUser.role === 'USER' ? 'Мои заявки и билеты' : 'Заявки и билеты клиентов';
-    $('statistics-scope').textContent = currentUser && currentUser.role === 'USER' ? 'Только ваши заявки и билеты' : 'По всей базе данных';
-    $('account-name').textContent = currentUser ? `${currentUser.name} • ${roles[currentUser.role]}` : '';
-    $('password-notice').textContent = currentUser && currentUser.passwordChangeRequired ? 'Замените временный пароль для продолжения работы.' : '';
-    $('password-details').open = Boolean(currentUser && currentUser.passwordChangeRequired);
-    if (!currentUser) {
-        bookings = []; catalogCustomers = []; catalogEvents = [];
-        ['bookings', 'customers', 'events', 'users', 'statistics'].forEach(id => $(id).replaceChildren());
-    }
+document
+    .querySelectorAll("[data-tab]")
+    .forEach((b) => (b.onclick = () => tab(b.dataset.tab)));
+
+function filters() {
+    const params = new URLSearchParams();
+    for (const [k, v] of new FormData(byId("filters")))
+        if (v !== "") params.set(k, v);
+    return params;
 }
+
+byId("filters").onsubmit = (e) => {
+    e.preventDefault();
+    state.page = 0;
+    void tab("bookings");
+};
+byId("filters").onreset = () => {
+    state.page = 0;
+    setTimeout(() => tab("bookings"), 0);
+};
+
+async function loadBookings() {
+    const params = filters();
+    params.set("page", String(state.page));
+    const data = await api("/bookings?" + params);
+    state.bookings = data.content;
+    byId("selectAll").checked = false;
+    byId("bookingRows").innerHTML =
+        data.content
+            .map(
+                (b) =>
+                    `<tr><td><input type="checkbox" data-select="${b.id}" aria-label="Выбрать ${esc(b.ticketNumber)}"></td><td>${esc(b.ticketNumber)}<small>${esc(b.customerName)}</small><small>${b.tags.map(esc).join(" · ")}${b.vip ? " · VIP" : ""}</small></td><td>${esc(b.eventTitle)}</td><td>${esc(statuses[b.status])}</td><td>${esc(b.price)} ₽</td><td>${priorities[b.priority]}</td><td><button data-action="notes" data-id="${b.id}" class="secondary">Заметки</button>${(write() || buyer() && !b.archived && ["NEW", "CONFIRMED"].includes(b.status)) ? `<button data-action="edit" data-id="${b.id}">${buyer() && b.status === "CONFIRMED" ? "Отменить" : "Изменить"}</button>${write() || b.status === "NEW" ? `<button data-action="${b.archived ? "restore" : "archive"}" data-id="${b.id}" class="secondary">${b.archived ? "Восстановить" : "В архив"}</button>` : ""}` : ""}${admin() && b.archived ? `<button data-action="delete" data-id="${b.id}" class="secondary">Удалить навсегда</button>` : ""}</td></tr>`,
+            )
+            .join("") || '<tr><td colspan="7">Билетов пока нет. Откройте «Мероприятия» и выберите, куда хотите пойти, или измените фильтры.</td></tr>';
+    byId("pageInfo").textContent =
+        `Страница ${data.number + 1} из ${Math.max(1, data.totalPages)} · Всего ${data.totalElements}`;
+    byId("prevPage").disabled = data.first;
+    byId("nextPage").disabled = data.last;
+}
+
+byId("prevPage").onclick = () => {
+    state.page--;
+    void tab("bookings");
+};
+byId("nextPage").onclick = () => {
+    state.page++;
+    void tab("bookings");
+};
+byId("selectAll").onchange = (e) =>
+    document
+        .querySelectorAll("[data-select]")
+        .forEach((c) => (c.checked = e.target.checked));
+byId("bookingRows").onclick = async (e) => {
+    const b = e.target.closest("[data-action]");
+    if (!b) return;
+    const id = b.dataset.id;
+    try {
+        if (b.dataset.action === "notes") return await openNotes(id);
+        if (b.dataset.action === "edit")
+            return bookingEditor(state.bookings.find((x) => x.id === id));
+        if (
+            !confirm(
+                b.dataset.action === "delete"
+                    ? "Удалить билет навсегда вместе с заметками?"
+                    : b.dataset.action === "archive"
+                        ? "Переместить билет в архив?"
+                        : "Восстановить билет?",
+            )
+        )
+            return;
+        if (b.dataset.action === "archive")
+            await api("/bookings/" + id, {method: "DELETE"});
+        if (b.dataset.action === "restore")
+            await api("/bookings/" + id + "/restore", {method: "POST"});
+        if (b.dataset.action === "delete")
+            await api("/bookings/" + id + "/permanent", {
+                method: "DELETE",
+                headers: {"X-Confirm-Delete": "PERMANENTLY_DELETE"},
+            });
+        await loadBookings();
+        message("Операция выполнена.");
+    } catch (ex) {
+        message(ex.message);
+    }
+};
+
+function field(name, label, type = "text", value = "", options = null) {
+    const wrapper = document.createElement("label");
+    wrapper.append(document.createTextNode(label));
+    const input = document.createElement(options ? "select" : type === "textarea" ? "textarea" : "input");
+    input.setAttribute("name", name);
+    if (options) {
+        for (const option of options) {
+            const node = document.createElement("option");
+            node.value = String(option.value);
+            node.textContent = option.label;
+            node.selected = String(value) === String(option.value);
+            input.append(node);
+        }
+    } else if (type === "textarea") {
+        input.setAttribute("maxlength", "4000");
+        input.textContent = value;
+    } else {
+        input.setAttribute("type", type);
+        if (type === "checkbox") {
+            if (value) input.setAttribute("checked", "");
+        } else input.setAttribute("value", value);
+        if (type === "password") input.setAttribute("autocomplete", "new-password");
+        if (type === "number") {
+            input.setAttribute("step", "0.01");
+            input.setAttribute("min", "0");
+        }
+    }
+    wrapper.append(input);
+    return wrapper.outerHTML;
+}
+
+function editor(title, fields, save) {
+    byId("editorTitle").textContent = title;
+    byId("editorFields").innerHTML = fields;
+    byId("editorError").textContent = "";
+    byId("editor").showModal();
+    byId("editorForm").onsubmit = async (e) => {
+        e.preventDefault();
+        const submit = e.target.querySelector('[type="submit"]');
+        if (submit.disabled) return;
+        submit.disabled = true;
+        try {
+            await save(new FormData(e.target));
+            byId("editor").close();
+            message("Сохранено.");
+        } catch (ex) {
+            byId("editorError").textContent = ex.message;
+        } finally {
+            submit.disabled = false;
+        }
+    };
+}
+
+byId("closeEditor").onclick = () => byId("editor").close();
+
+function bookingEditor(b = null, selectedEvent = null) {
+    if (b?.archived) {
+        message("Сначала восстановите билет из архива.");
+        return;
+    }
+    const choices = availableEvents();
+    if (!b && !choices.length) {
+        message("Сейчас нет мероприятий, доступных для бронирования. Загляните позже.");
+        return;
+    }
+    const original = b && state.events.find(e => e.id === b.eventId);
+    if (original && !choices.some(e => e.id === original.id)) choices.unshift(original);
+    const customerOptions = state.customers.map(c => ({value: c.id, label: c.name}));
+    const allowed = b ? (b.status === "NEW" ? ["NEW", "CONFIRMED", "CANCELLED"] : b.status === "CONFIRMED" ? ["CONFIRMED", "NEW", "PAID", "CANCELLED"] : b.status === "PAID" ? ["PAID", "CANCELLED"] : ["CANCELLED"]) : ["NEW"];
+    const statusOptions = (buyer() ? (b?.status === "CONFIRMED" ? ["CANCELLED"] : ["NEW", "CANCELLED"].filter(v => b || v === "NEW")) : allowed).map(value => ({
+        value,
+        label: statuses[value]
+    }));
+    editor(b ? (buyer() && b.status === "CONFIRMED" ? "Отменить бронирование" : "Изменить бронирование") : "Забронировать билет",
+        (buyer() ? `<p>Покупатель: <strong>${esc(state.tokens.user.name)}</strong></p>` : field("customerId", "Клиент", "", b?.customerId ?? state.customers[0]?.id, customerOptions)) +
+        field("eventId", "Мероприятие", "", b?.eventId ?? selectedEvent?.id ?? choices[0]?.id,
+            choices.map(e => ({
+                value: e.id,
+                label: e.title + " · " + formatDate(e.startsAt) + " · " + e.price + " ₽"
+            }))) +
+        field("status", "Статус", "", b?.status ?? "NEW", statusOptions) +
+        (buyer() ? "<p>Цена определяется выбранным мероприятием. Заявку подтвердит менеджер.</p>" : field("vip", "VIP", "checkbox", b?.vip)) +
+        field("description", "Комментарий к бронированию", "textarea", b?.description ?? "") +
+        (buyer() ? "" : field("tags", "Метки через запятую", "text", b?.tags.join(", ") ?? "")),
+        async f => {
+            const body = {
+                customerId: buyer() ? state.customers[0]?.id : Number(f.get("customerId")),
+                eventId: f.get("eventId") || b?.eventId,
+                status: f.get("status"),
+                vip: buyer() ? (b?.vip ?? false) : f.has("vip"),
+                description: f.get("description"),
+                tags: buyer() ? (b?.tags ?? []) : String(f.get("tags") || "").split(",").map(t => t.trim()).filter(Boolean),
+                version: b?.version
+            };
+            await api("/bookings" + (b ? "/" + b.id : ""), {method: b ? "PUT" : "POST", body});
+            await tab("bookings");
+        });
+    if (b && b.status !== "NEW") byId("editorFields").querySelector('[name="eventId"]').disabled = true;
+}
+
+byId("newBooking").onclick = async () => {
+    try {
+        await loadReferences();
+        bookingEditor();
+    } catch (ex) {
+        message(ex.message);
+    }
+};
+byId("bulkApply").onclick = async () => {
+    const ids = [...document.querySelectorAll("[data-select]:checked")].map(
+        (c) => c.dataset.select,
+    );
+    if (!ids.length) {
+        message("Выберите бронирования.");
+        return;
+    }
+    if (!confirm("Применить операцию к " + ids.length + " записям?")) return;
+    try {
+        const r = await api("/bookings/bulk", {
+            method: "POST",
+            body: {
+                ids,
+                action: byId("bulkAction").value,
+                status: byId("bulkStatus").value,
+                tag: byId("bulkTag").value,
+            },
+        });
+        message(
+            `Успешно: ${r.succeeded} из ${r.requested}` +
+            (r.failures.length
+                ? "\n" + r.failures.map((f) => f.id + ": " + f.message).join("\n")
+                : ""),
+        );
+        await loadBookings();
+    } catch (ex) {
+        message(ex.message);
+    }
+};
+byId("exportCsv").onclick = async () => {
+    try {
+        const text = await api("/bookings/export?" + filters(), {raw: true});
+        const url = URL.createObjectURL(
+            new Blob([text], {type: "text/csv;charset=utf-8"}),
+        );
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "bookings.csv";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (ex) {
+        message(ex.message);
+    }
+};
+byId("previewImport").onclick = async () => {
+    try {
+        state.preview = null;
+        byId("applyImport").disabled = true;
+        if (!byId("csvFile").files[0]) {
+            message("Выберите CSV-файл");
+            return;
+        }
+        const body = new FormData();
+        body.set("file", byId("csvFile").files[0]);
+        body.set("mode", byId("importMode").value);
+        state.preview = await api("/bookings/import/preview", {
+            method: "POST",
+            body,
+        });
+        byId("importResult").textContent = `Готово к импорту: ${state.preview.validRows}. Строк с ошибками: ${state.preview.invalidRows}.` + importErrors(state.preview.errors);
+        byId("applyImport").disabled = state.preview.validRows === 0;
+    } catch (ex) {
+        message(ex.message);
+    }
+};
+byId("csvFile").onchange = byId("importMode").onchange = () => {
+    state.preview = null;
+    byId("applyImport").disabled = true;
+};
+byId("applyImport").onclick = async () => {
+    try {
+        if (!state.preview) return;
+        const result = await api("/bookings/import/apply", {
+            method: "POST",
+            body: {previewId: state.preview.previewId, mode: state.preview.mode},
+        });
+        byId("importResult").textContent = `Сохранено записей: ${result.succeeded}.` + importErrors(result.errors);
+        state.preview = null;
+        byId("applyImport").disabled = true;
+        await loadBookings();
+    } catch (ex) {
+        message(ex.message);
+    }
+};
+
+function importErrors(errors) {
+    return errors.length ? "\n" + errors.map(e => `Строка ${e.row}: ${e.message}`).join("\n") : "\nОшибок нет.";
+}
+
+async function loadEvents() {
+    await loadReferences();
+    byId("eventCards").innerHTML = (buyer() ? availableEvents() : state.events)
+        .map(
+            (e) =>
+                `<article class="card"><h2>${esc(e.title)}</h2><p>${esc(e.venue)}<br>${esc(formatDate(e.startsAt))}<br>${e.price} ₽ · ${e.active ? "Активно" : "Отключено"}</p>${e.available && (write() || buyer()) ? `<button data-book-event="${e.id}">Забронировать</button>` : ""}${admin() ? `<button data-event="${e.id}">Изменить</button>` : ""}</article>`,
+        )
+        .join("") || "<p>Сейчас нет мероприятий, доступных для бронирования. Загляните позже.</p>";
+    visibility();
+}
+
+function eventEditor(e = null) {
+    editor(
+        e ? "Изменить мероприятие" : "Новое мероприятие",
+        field("title", "Название", "text", e?.title ?? "") +
+        field("venue", "Место", "text", e?.venue ?? "") +
+        field("startsAt", "Начало", "datetime-local", e?.startsAt ?? "") +
+        field("price", "Цена", "number", e?.price ?? 0) +
+        field("active", "Активно", "checkbox", e?.active ?? true),
+        async (f) => {
+            await api("/events" + (e ? "/" + e.id : ""), {
+                method: e ? "PUT" : "POST",
+                body: {
+                    title: f.get("title"),
+                    venue: f.get("venue"),
+                    startsAt: f.get("startsAt"),
+                    price: Number(f.get("price")),
+                    active: f.has("active"),
+                    version: e?.version,
+                },
+            });
+            await loadEvents();
+        },
+    );
+}
+
+byId("newEvent").onclick = () => eventEditor();
+byId("eventCards").onclick = (e) => {
+    const book = e.target.closest("[data-book-event]");
+    if (book) return bookingEditor(null, state.events.find(x => x.id === book.dataset.bookEvent));
+    const b = e.target.closest("[data-event]");
+    if (b) eventEditor(state.events.find((x) => x.id === b.dataset.event));
+};
+byId("newCustomer").onclick = () =>
+    editor("Новый клиент", field("name", "Имя"), async (f) => {
+        await api("/customers", {method: "POST", body: {name: f.get("name")}});
+        await loadReferences();
+    });
+
+async function loadAnalytics() {
+    const d = await api("/analytics/summary");
+    const names = {
+        total: "Всего бронирований",
+        active: "Активные",
+        archived: "Архивные",
+        vip: "VIP-бронирования",
+        averagePrice: "Средняя цена",
+    };
+    byId("metrics").innerHTML = Object.entries(names)
+        .map(
+            ([k, n]) =>
+                `<article class="card"><div>${n}</div><strong>${esc(d[k])}</strong></article>`,
+        )
+        .join("");
+    byId("breakdowns").innerHTML = Object.entries({
+        byEvent: "По мероприятиям",
+        byStatus: "По статусам",
+        byPriority: "По приоритету",
+    })
+        .map(
+            ([k, n]) =>
+                `<article class="card"><h2>${n}</h2>${Object.entries(d[k])
+                    .map(
+                        ([a, b]) =>
+                            `<p>${esc(a.includes(" | ") ? a.split(" | ").slice(1).join(" | ") : textValue(a))}: <b>${b}</b></p>`,
+                    )
+                    .join("")}</article>`,
+        )
+        .join("");
+}
+
+let noteBooking = null,
+    noteRows = [];
+
+async function openNotes(id) {
+    noteBooking = id;
+    await loadNotes();
+    if (!byId("notesDialog").open) byId("notesDialog").showModal();
+    visibility();
+}
+
+async function loadNotes() {
+    noteRows = await api("/bookings/" + noteBooking + "/notes");
+    byId("notesList").innerHTML =
+        noteRows
+            .map(
+                (n) =>
+                    `<article class="row"><b>${n.pinned ? "📌 " : ""}${esc(n["authorName"])}</b><small> · ${esc(formatDate(n["updatedAt"]))}</small><p>${esc(n.body)}</p>${write() ? `<button data-note="${n.id}" data-kind="edit">Изменить</button><button data-note="${n.id}" data-kind="delete" class="secondary">Удалить</button>` : ""}</article>`,
+            )
+            .join("") || "<p>Заметок пока нет</p>";
+}
+
+byId("noteForm").onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+        const f = new FormData(e.target);
+        await api("/bookings/" + noteBooking + "/notes", {
+            method: "POST",
+            body: {body: f.get("body"), pinned: f.has("pinned")},
+        });
+        e.target.reset();
+        await loadNotes();
+    } catch (ex) {
+        message(ex.message);
+    }
+};
+byId("notesList").onclick = async (e) => {
+    const b = e.target.closest("[data-note]");
+    if (!b) return;
+    const n = noteRows.find((x) => x.id === b.dataset.note);
+    try {
+        if (b.dataset.kind === "delete") {
+            if (!confirm("Удалить заметку?")) return;
+            await api("/bookings/" + noteBooking + "/notes/" + n.id, {
+                method: "DELETE",
+            });
+            await loadNotes();
+        } else {
+            const text = prompt("Текст заметки", n.body);
+            if (text === null) return;
+            await api("/bookings/" + noteBooking + "/notes/" + n.id, {
+                method: "PUT",
+                body: {
+                    body: text,
+                    pinned: confirm("Закрепить заметку?"),
+                    version: n.version,
+                },
+            });
+            await loadNotes();
+        }
+    } catch (ex) {
+        message(ex.message);
+    }
+};
+byId("closeNotes").onclick = () => byId("notesDialog").close();
+let users = [];
 
 async function loadUsers() {
-    const users = await api('auth/users');
-    $('users').replaceChildren(...users.map(user => {
-        const row = textNode('li', `${user.login} • ${user.name} • ${roles[user.role]} • ${user.enabled ? 'Активен' : 'Отключён'}`);
-        const edit = textNode('button', 'Изменить имя и роль');
-        edit.onclick = () => showEditor('Изменить пользователя', [
-            {key: 'name', label: 'Имя', value: user.name, maxLength: 120},
-            {key: 'role', label: 'Роль', value: user.role, options: user.role === 'ADMIN' ? [['ADMIN', roles.ADMIN]] : Object.entries(roles)}
-        ], async values => { await api(`auth/users/${user.id}`, 'PUT', {expected: user, name: values.name, role: values.role}); setSession(await api('auth/session')); });
-        row.append(edit);
-        if (user.role !== 'ADMIN') {
-            const button = textNode('button', user.enabled ? 'Отключить доступ' : 'Включить доступ');
-            button.onclick = () => {
-                if (confirm(`Изменить доступ для «${user.login}»?`)) perform(() => api(`auth/users/${user.id}/access`, 'PATCH', {enabled: !user.enabled}));
+    const data = await api("/admin/users?page=" + state.userPage);
+    users = data.content;
+    byId("userRows").innerHTML = users
+        .map(
+            (u) =>
+                `<article class="row"><b>${esc(u.name)}</b> · ${esc(u.login)} · ${u.role} · ${u.enabled ? "Активен" : "Отключён"}<button data-user="${u.id}">Изменить</button><button data-reset="${u.id}" class="secondary">Сбросить пароль</button></article>`,
+        )
+        .join("");
+    byId("usersInfo").textContent =
+        `Страница ${data.number + 1} · Всего ${data.totalElements}`;
+    byId("prevUsers").disabled = data.first;
+    byId("nextUsers").disabled = data.last;
+}
+
+byId("prevUsers").onclick = () => {
+    state.userPage--;
+    void tab("users");
+};
+byId("nextUsers").onclick = () => {
+    state.userPage++;
+    void tab("users");
+};
+
+function userEditor(u = null) {
+    editor(
+        u ? "Изменить пользователя" : "Новая учётная запись",
+        field("login", "Логин", "text", u?.login ?? "") +
+        field("name", "Имя", "text", u?.name ?? "") +
+        field(
+            "role",
+            "Роль",
+            "",
+            u?.role ?? "USER",
+            ["USER", "VIEWER", "MANAGER", "ADMIN"].map((v) => ({value: v, label: textValue(v)})),
+        ) +
+        field("enabled", "Активен", "checkbox", u?.enabled ?? true) +
+        (u ? "" : field("temporaryPassword", "Временный пароль", "password")),
+        async (f) => {
+            const user = {
+                login: f.get("login"),
+                name: f.get("name"),
+                role: f.get("role"),
+                enabled: f.has("enabled"),
+                version: u?.version,
             };
-            row.append(button);
-        }
-        return row;
-    }));
+            await api("/admin/users" + (u ? "/" + u.id : ""), {
+                method: u ? "PUT" : "POST",
+                body: u
+                    ? user
+                    : {user, temporaryPassword: f.get("temporaryPassword")},
+            });
+            await loadUsers();
+        },
+    );
 }
 
-$('login-form').onsubmit = e => {
-    e.preventDefault();
-    perform(async () => {
-        setSession(await api('auth/session'));
-        setSession(await api('auth/login', 'POST', {login: $('login').value, password: $('login-password').value}));
-        $('login-password').value = '';
-    });
+byId("newUser").onclick = () => userEditor();
+byId("userRows").onclick = (e) => {
+    const b = e.target.closest("[data-user],[data-reset]");
+    if (!b) return;
+    if (b.dataset.user) userEditor(users.find((u) => u.id === b.dataset.user));
+    else
+        editor(
+            "Сброс пароля",
+            field("temporaryPassword", "Новый временный пароль", "password"),
+            async (f) => {
+                await api("/admin/users/" + b.dataset.reset + "/reset-password", {
+                    method: "POST",
+                    body: {temporaryPassword: f.get("temporaryPassword")},
+                });
+                await loadUsers();
+            },
+        );
 };
-function showRegistration(registering) {
-    $('login-form').hidden = registering;
-    $('registration-form').hidden = !registering;
-    $('login-password').value = '';
-    $('registration-password').value = '';
-    $('registration-confirmation').value = '';
-    message('');
-    $(registering ? 'registration-name' : 'login').focus();
-}
-$('show-registration').onclick = () => showRegistration(true);
-$('show-login').onclick = () => showRegistration(false);
-$('registration-form').onsubmit = async e => {
-    e.preventDefault();
-    if ($('registration-password').value !== $('registration-confirmation').value)
-        return message('Подтверждение пароля не совпадает.', true);
-    await perform(async () => {
-        setSession(await api('auth/session'));
-        const session = await api('auth/register', 'POST', {
-            login: $('registration-login').value,
-            name: $('registration-name').value,
-            password: $('registration-password').value,
-            confirmation: $('registration-confirmation').value
-        });
-        $('registration-form').reset();
-        showRegistration(false);
-        setSession(session);
-    });
-    $('registration-password').value = '';
-    $('registration-confirmation').value = '';
-};
-$('logout').onclick = () => perform(async () => {
-    await api('auth/logout', 'POST');
-    setSession(await api('auth/session'));
-    $('password-form').reset();
-    $('login-form').reset();
-    $('registration-form').reset();
-    showRegistration(false);
-});
-$('password-form').onsubmit = e => {
-    e.preventDefault();
-    if ($('new-password').value !== $('confirm-password').value) return message('Подтверждение пароля не совпадает.', true);
-    perform(async () => {
-        setSession(await api('auth/password', 'POST', {currentPassword: $('old-password').value, newPassword: $('new-password').value}));
-        $('password-form').reset();
-        $('password-details').open = false;
-    });
-};
-$('user-form').onsubmit = e => {
-    e.preventDefault();
-    if ($('user-password').value !== $('user-confirmation').value) return message('Подтверждение пароля не совпадает.', true);
-    perform(() => api('auth/users', 'POST', {login: $('user-login').value, name: $('user-name').value, role: $('user-role').value, password: $('user-password').value}), e.target);
-};
-perform(async () => { setSession(await api('auth/session')); });
 
-function addCatalogActions(row, path, entity, fields) {
-    const edit = textNode('button', 'Изменить');
-    edit.onclick = () => showEditor('Изменить запись', fields, values => api(`${path}/${entity.id}`, 'PUT', values));
-    const remove = textNode('button', 'Удалить'); remove.className = 'danger';
-    remove.onclick = () => { if (confirm('Удалить запись? Записи, связанные с билетами или учётными записями, удалить нельзя.')) perform(() => api(`${path}/${entity.id}`, 'DELETE')); };
-    row.append(edit, remove);
+async function loadAudit() {
+    const q = new FormData(byId("auditSearch")).get("q");
+    const data = await api(
+        "/admin/audit?page=" + state.auditPage + "&q=" + encodeURIComponent(String(q ?? "")),
+    );
+    byId("auditRows").innerHTML = data.content
+        .map(
+            (/** @type {{eventType:string, actor:string, occurredAt:string, summary:string, entityType:string, entityId:string, correlationId:string}} */ a) =>
+                `<article class="row"><b>${esc(auditNames[a.eventType] || "Изменение данных")}</b> · ${esc(a["actor"] === "anonymous" ? "Посетитель" : a["actor"])} · ${esc(formatDate(a.occurredAt))}<p>${esc(a.summary)}</p><small>${esc(entityNames[a.entityType] || "Запись")} · ${esc(a.entityId)} · Запрос ${esc(a.correlationId)}</small></article>`,
+        )
+        .join("");
+    byId("auditInfo").textContent =
+        `Страница ${data.number + 1} · Всего ${data.totalElements}`;
+    byId("prevAudit").disabled = data.first;
+    byId("nextAudit").disabled = data.last;
 }
 
-function showEditor(title, fields, save) {
-    const dialog = document.createElement('dialog');
-    const form = document.createElement('form');
-    form.append(textNode('h2', title));
-    const controls = {};
-    fields.forEach(field => {
-        const label = textNode('label', field.label);
-        const input = document.createElement(field.options ? 'select' : 'input');
-        if (field.options) field.options.forEach(([value, text]) => input.append(new Option(text, value)));
-        else { input.type = field.type || 'text'; ['min', 'max', 'step', 'maxLength'].forEach(key => { if (field[key] !== undefined) input[key] = field[key]; }); }
-        input.value = field.value; input.required = true;
-        label.append(input); form.append(label); controls[field.key] = input;
-    });
-    const error = textNode('p', ''); error.className = 'editor-error error'; form.append(error);
-    const submit = textNode('button', 'Сохранить'); submit.type = 'submit';
-    const cancel = textNode('button', 'Отмена'); cancel.type = 'button'; cancel.onclick = () => dialog.close();
-    form.append(submit, cancel); dialog.append(form); document.body.append(dialog);
-    dialog.onclose = () => dialog.remove();
-    form.onsubmit = event => { event.preventDefault(); perform(async () => {
-        await save(Object.fromEntries(Object.entries(controls).map(([key, input]) => [key, input.value]))); dialog.close();
-    }); };
-    dialog.showModal();
-}
+byId("auditSearch").onsubmit = (e) => {
+    e.preventDefault();
+    state.auditPage = 0;
+    void tab("audit");
+};
+byId("prevAudit").onclick = () => {
+    state.auditPage--;
+    void tab("audit");
+};
+byId("nextAudit").onclick = () => {
+    state.auditPage++;
+    void tab("audit");
+};
+
+byId("copyToken").onclick = async () => {
+    try {
+        await navigator.clipboard.writeText(state.tokens.accessToken);
+        message("Токен скопирован. В Swagger нажмите Authorize и вставьте его.");
+    } catch (ex) {
+        message("Не удалось скопировать токен: " + ex.message);
+    }
+};
