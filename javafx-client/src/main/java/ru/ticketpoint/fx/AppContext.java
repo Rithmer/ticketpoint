@@ -1,16 +1,21 @@
 package ru.ticketpoint.fx;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Objects;
+
 import ru.ticketpoint.auth.*;
 import ru.ticketpoint.config.*;
-
-import java.util.Objects;
+import ru.ticketpoint.model.Booking;
+import ru.ticketpoint.model.BookingStatus;
 
 public final class AppContext {
     private final ApplicationServices services;
     private final FxTaskExecutor tasks;
     private final AuthService auth;
     private volatile User user;
-    private final java.time.Instant expires = java.time.Instant.now().plusSeconds(1800);
+    private final Instant expires = Instant.now().plusSeconds(1800);
 
     public AppContext(ApplicationServices services, FxTaskExecutor tasks) {
         this.services = Objects.requireNonNull(services);
@@ -27,7 +32,7 @@ public final class AppContext {
     }
 
     private User sessionUser() {
-        if (java.time.Instant.now().isAfter(expires)) throw new AuthException("Сеанс завершён. Войдите заново");
+        if (Instant.now().isAfter(expires)) throw new AuthException("Сеанс завершён. Войдите заново");
         return user;
     }
 
@@ -35,10 +40,17 @@ public final class AppContext {
         return services;
     }
 
-    public FxTaskExecutor tasks() {
+    @org.jetbrains.annotations.Contract(pure = true)
+    public FxTaskExecutor getTasks() {
         return tasks;
     }
 
+    public AuthService requireAuth() {
+        if (auth == null) throw new AuthException("Войдите в систему");
+        return auth;
+    }
+
+    @org.jetbrains.annotations.Contract(pure = true)
     public AuthService auth() {
         return auth;
     }
@@ -58,24 +70,28 @@ public final class AppContext {
     public boolean isAdmin() {
         return auth != null && user != null && user.role() == Role.ADMIN;
     }
-    public boolean isCustomer() { return user != null && user.role() == Role.USER; }
 
-    public boolean canEdit(ru.ticketpoint.model.Booking booking) {
-        if (booking == null || booking.status() == ru.ticketpoint.model.BookingStatus.CANCELLED) return false;
-        return !isCustomer() || (booking.status() != ru.ticketpoint.model.BookingStatus.PAID
-                && booking.event().startsAt().isAfter(java.time.LocalDateTime.now(services.clock())));
+    public boolean isCustomer() {
+        return user != null && user.role() == Role.USER;
     }
 
-    public boolean canDelete(ru.ticketpoint.model.Booking booking) {
-        return booking != null && (booking.status() == ru.ticketpoint.model.BookingStatus.NEW
-                || !isCustomer() && booking.status() == ru.ticketpoint.model.BookingStatus.CANCELLED);
+    public boolean canEdit(Booking booking) {
+        if ((!canWrite() && !isCustomer()) || booking == null || booking.status() == BookingStatus.CANCELLED)
+            return false;
+        return !isCustomer() || (booking.status() != BookingStatus.PAID
+                && booking.event().startsAt().isAfter(LocalDateTime.now(services.clock())));
     }
 
-    public java.util.List<ru.ticketpoint.model.BookingStatus> statuses(ru.ticketpoint.model.Booking booking) {
+    public boolean canDelete(Booking booking) {
+        return (canWrite() || isCustomer()) && booking != null && (booking.status() == BookingStatus.NEW
+                || !isCustomer() && booking.status() == BookingStatus.CANCELLED);
+    }
+
+    public List<BookingStatus> statuses(Booking booking) {
         if (!isCustomer()) return booking.status().allowedTransitions();
-        return booking.status() == ru.ticketpoint.model.BookingStatus.NEW
-                ? java.util.List.of(ru.ticketpoint.model.BookingStatus.NEW, ru.ticketpoint.model.BookingStatus.CANCELLED)
-                : java.util.List.of(ru.ticketpoint.model.BookingStatus.CANCELLED);
+        return booking.status() == BookingStatus.NEW
+                ? List.of(BookingStatus.NEW, BookingStatus.CANCELLED)
+                : List.of(BookingStatus.CANCELLED);
     }
 
     public void logout() {

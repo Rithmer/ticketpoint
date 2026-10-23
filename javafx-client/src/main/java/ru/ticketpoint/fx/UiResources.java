@@ -1,16 +1,16 @@
 package ru.ticketpoint.fx;
 
-import org.jetbrains.annotations.NotNull;
-
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
 
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import org.jetbrains.annotations.NotNull;
+
 final class UiResources {
-    private UiResources() { }
+    private UiResources() {
+    }
 
     static @NotNull URL location(String name) throws FileNotFoundException {
         URL location = UiResources.class.getResource(name);
@@ -30,7 +30,8 @@ final class UiResources {
         return new View<>(root, controller);
     }
 
-    record View<C>(Parent root, C controller) { }
+    record View<C>(Parent root, C controller) {
+    }
 
     static String stylesheet() throws FileNotFoundException {
         return location("ticketpoint.css").toExternalForm();

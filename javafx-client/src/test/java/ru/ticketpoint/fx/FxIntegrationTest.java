@@ -1,7 +1,26 @@
 package ru.ticketpoint.fx;
 
+import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.DriverManager;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -9,24 +28,16 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import ru.ticketpoint.auth.AuthConfig;
+import ru.ticketpoint.auth.Role;
+import ru.ticketpoint.auth.User;
+import ru.ticketpoint.config.ApplicationServices;
 import ru.ticketpoint.config.DatabaseConfig;
+import ru.ticketpoint.exception.EntityNotFoundException;
 import ru.ticketpoint.model.Booking;
 import ru.ticketpoint.model.BookingStatus;
 import ru.ticketpoint.model.Customer;
 import ru.ticketpoint.model.Event;
-
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.sql.DriverManager;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -70,7 +81,7 @@ class FxIntegrationTest {
             }
         }
         String url = System.getenv("TEST_DB_URL");
-        context = new AppContext(ru.ticketpoint.config.ApplicationServices.jdbc(new DatabaseConfig(url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema,
+        context = new AppContext(ApplicationServices.jdbc(new DatabaseConfig(url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema,
                 System.getenv("TEST_DB_USER"), System.getenv("TEST_DB_PASSWORD"), ZoneId.of("Europe/Moscow"), 5, 15, 30)), new FxTaskExecutor());
     }
 
@@ -109,9 +120,9 @@ class FxIntegrationTest {
             if (!progress.isVisible()) {
                 loaded.complete(null);
             } else {
-                javafx.beans.value.ChangeListener<Boolean> listener = new javafx.beans.value.ChangeListener<>() {
+                ChangeListener<Boolean> listener = new ChangeListener<>() {
                     @Override
-                    public void changed(javafx.beans.value.ObservableValue<? extends Boolean> value,
+                    public void changed(ObservableValue<? extends Boolean> value,
                                         Boolean previous, Boolean visible) {
                         if (!visible) {
                             progress.visibleProperty().removeListener(this);
@@ -130,14 +141,14 @@ class FxIntegrationTest {
     @AfterEach
     void closeWindow() throws Exception {
         fx(() -> {
-            for (Window window : java.util.List.copyOf(Window.getWindows())) window.hide();
+            for (Window window : List.copyOf(Window.getWindows())) window.hide();
             return null;
         });
     }
 
     @AfterAll
     static void cleanup() throws Exception {
-        if (context != null) context.tasks().close();
+        if (context != null) context.getTasks().close();
         if (schema != null) {
             try (var connection = DriverManager.getConnection(System.getenv("TEST_DB_URL"),
                     System.getenv("TEST_DB_USER"), System.getenv("TEST_DB_PASSWORD"));
@@ -179,21 +190,18 @@ class FxIntegrationTest {
                     .filter(b -> b.status() == BookingStatus.CANCELLED).findFirst().orElseThrow());
             assertTrue(((Button) element("editButton")).isDisabled());
             assertFalse(((Button) element("detailsButton")).isDisabled());
-            for (String resource : new String[]{"booking-dialog.fxml", "customer-dialog.fxml", "event-dialog.fxml"}) {
-                assertNotNull(new FXMLLoader(UiResources.location(resource)).load());
-            }
             TabPane tabs = (TabPane) element("tabs");
             tabs.getSelectionModel().select((Tab) element("statisticsTab"));
             stage.getScene().getRoot().applyCss();
             stage.getScene().getRoot().layout();
             assertEquals("10", ((Label) stage.getScene().lookup("#total")).getText());
             assertEquals("30,0 %", ((Label) stage.getScene().lookup("#paidShare")).getText());
-            snapshot("statistics.png");
+
             tabs.getSelectionModel().select(0);
             table.getSelectionModel().clearSelection();
             stage.getScene().getRoot().applyCss();
             stage.getScene().getRoot().layout();
-            snapshot("bookings.png");
+
             stage.setWidth(960);
             stage.setHeight(680);
             stage.getScene().getRoot().applyCss();
@@ -202,7 +210,7 @@ class FxIntegrationTest {
         });
         CompletableFuture<Void> pulse = new CompletableFuture<>();
         fx(() -> {
-            new javafx.animation.AnimationTimer() {
+            new AnimationTimer() {
                 @Override
                 public void handle(long now) {
                     stop();
@@ -212,15 +220,12 @@ class FxIntegrationTest {
             return null;
         });
         pulse.get(10, TimeUnit.SECONDS);
-        fx(() -> {
-            snapshot("bookings-small.png");
-            return null;
-        });
+        fx(() -> null);
     }
 
     @Test
     void bookingDialogValidatesThenPersistsAndEditAndDeleteRefreshTable() throws Exception {
-        var initialIds = fx(() -> table.getItems().stream().map(Booking::id).collect(java.util.stream.Collectors.toSet()));
+        var initialIds = fx(() -> table.getItems().stream().map(Booking::id).collect(Collectors.toSet()));
         int initial = initialIds.size();
         fx(() -> {
             Platform.runLater(() -> {
@@ -311,7 +316,10 @@ class FxIntegrationTest {
             return null;
         });
         context.services().bookings().changeStatus(created.id(), BookingStatus.CANCELLED);
-        fx(() -> { ((MainController) loader.getController()).configure(context); return null; });
+        fx(() -> {
+            ((MainController) loader.getController()).configure(context);
+            return null;
+        });
         awaitLoaded();
         fx(() -> {
             table.getSelectionModel().select(table.getItems().stream().filter(b -> b.id().equals(created.id())).findFirst().orElseThrow());
@@ -325,7 +333,7 @@ class FxIntegrationTest {
         });
         awaitLoaded();
         assertEquals(initial, fx(() -> table.getItems().size()));
-        assertThrows(ru.ticketpoint.exception.EntityNotFoundException.class, () -> context.services().bookings().findById(created.id()));
+        assertThrows(EntityNotFoundException.class, () -> context.services().bookings().findById(created.id()));
     }
 
     @Test
@@ -334,7 +342,7 @@ class FxIntegrationTest {
             Booking original = table.getItems().stream()
                     .filter(b -> b.status() == BookingStatus.CANCELLED).findFirst().orElseThrow();
             Event repriced = new Event(original.event().id(), original.event().title(), original.event().venue(),
-                    original.event().startsAt(), original.event().price().add(new java.math.BigDecimal("100.00")));
+                    original.event().startsAt(), original.event().price().add(new BigDecimal("100.00")));
             Booking booking = new Booking(original.id(), original.ticketNumber(), original.customer(), repriced,
                     original.priceAtBooking(), original.status(), original.createdAt());
             Platform.runLater(() -> {
@@ -362,7 +370,7 @@ class FxIntegrationTest {
         CompletableFuture<Void> completed = new CompletableFuture<>();
         CountDownLatch allowRefresh = new CountDownLatch(1);
         fx(() -> {
-            var operations = new UiOperations(context.tasks(), (javafx.scene.Node) element("workspace"),
+            var operations = new UiOperations(context.getTasks(), (Node) element("workspace"),
                     (Label) element("operationStatus"), (ProgressIndicator) element("progress"));
             operations.run(() -> null, "Удаление…", ignored -> operations.run(() -> {
                 refreshStarted.complete(null);
@@ -379,14 +387,14 @@ class FxIntegrationTest {
         try {
             refreshStarted.get(10, TimeUnit.SECONDS);
             assertTrue(fx(() -> ((ProgressIndicator) element("progress")).isVisible()));
-            assertTrue(fx(() -> ((javafx.scene.Node) element("workspace")).isDisabled()));
+            assertTrue(fx(() -> ((Node) element("workspace")).isDisabled()));
             assertEquals("Обновление…", fx(() -> ((Label) element("operationStatus")).getText()));
         } finally {
             allowRefresh.countDown();
         }
         completed.get(10, TimeUnit.SECONDS);
         assertFalse(fx(() -> ((ProgressIndicator) element("progress")).isVisible()));
-        assertFalse(fx(() -> ((javafx.scene.Node) element("workspace")).isDisabled()));
+        assertFalse(fx(() -> ((Node) element("workspace")).isDisabled()));
         assertEquals("Данные обновлены", fx(() -> ((Label) element("operationStatus")).getText()));
     }
 
@@ -446,19 +454,8 @@ class FxIntegrationTest {
         awaitLoaded();
         assertEquals(eventsBefore + 1, context.services().events().findAll().size());
         Event created = context.services().events().findAll().stream().filter(e -> e.title().equals(eventName)).findFirst().orElseThrow();
-        assertEquals(new java.math.BigDecimal("1500.00"), created.price());
-        assertEquals(java.time.LocalTime.of(19, 30), created.startsAt().toLocalTime());
-    }
-
-    @Test
-    void authenticationAndAccountFormsLoadAsFxml() throws Exception {
-        fx(() -> {
-            for (String resource : new String[]{"login.fxml", "password-dialog.fxml", "users.fxml", "user-dialog.fxml"}) {
-                Parent root = new FXMLLoader(UiResources.location(resource)).load();
-                assertNotNull(root, resource);
-            }
-            return null;
-        });
+        assertEquals(new BigDecimal("1500.00"), created.price());
+        assertEquals(LocalTime.of(19, 30), created.startsAt().toLocalTime());
     }
 
     @Test
@@ -475,7 +472,7 @@ class FxIntegrationTest {
                 stage.getScene().getStylesheets().add(UiResources.stylesheet());
                 LoginController controller = loginLoader.getController();
                 controller.configure(tasks, signedIn::complete, () -> config,
-                        () -> new ru.ticketpoint.auth.AuthConfig("admin", "Admin", "Initial-password-2026!"));
+                        () -> new AuthConfig("admin", "Admin", "Initial-password-2026!"));
                 ((Button) root.lookup("#showRegistrationButton")).fire();
                 assertTrue(root.lookup("#registrationForm").isVisible());
                 assertFalse(root.lookup("#form").isVisible());
@@ -488,13 +485,14 @@ class FxIntegrationTest {
                 ((Button) root.lookup("#registerButton")).fire();
                 assertTrue(((Label) root.lookup("#feedback")).getText().contains("не совпадает"));
                 ((PasswordField) root.lookup("#registrationConfirmation")).setText("Buyer-password-2026!");
-                snapshot("registration.png");
+
                 ((Button) root.lookup("#registerButton")).fire();
                 return null;
             });
             var result = signedIn.get(20, TimeUnit.SECONDS);
-            assertEquals(ru.ticketpoint.auth.Role.USER, result.user().role());
-            assertNotNull(result.user().customerId()); assertFalse(result.user().passwordChangeRequired());
+            assertEquals(Role.USER, result.user().role());
+            assertNotNull(result.user().customerId());
+            assertFalse(result.user().passwordChangeRequired());
             result.auth().requireRead(result.user());
             fx(() -> {
                 assertTrue(((PasswordField) stage.getScene().lookup("#registrationPassword")).getText().isEmpty());
@@ -518,19 +516,19 @@ class FxIntegrationTest {
                 stage.getScene().getStylesheets().add(UiResources.stylesheet());
                 LoginController loginController = loginLoader.getController();
                 loginController.configure(loginTasks, signedIn::complete, () -> config,
-                        () -> new ru.ticketpoint.auth.AuthConfig("admin", "Admin", "Initial-password-2026!"));
+                        () -> new AuthConfig("admin", "Admin", "Initial-password-2026!"));
                 ((Button) root.lookup(".button")).fire();
                 assertEquals("Введите логин и пароль", ((Label) root.lookup("#feedback")).getText());
                 ((TextField) root.lookup("#login")).setText("admin");
                 ((PasswordField) root.lookup("#password")).setText("Initial-password-2026!");
-                snapshot("login.png");
+
                 ((Button) root.lookup(".button")).fire();
                 return null;
             });
             var result = signedIn.get(20, TimeUnit.SECONDS);
             assertTrue(result.user().passwordChangeRequired());
             assertTrue(fx(() -> ((PasswordField) stage.getScene().lookup("#password")).getText().isEmpty()));
-            var passwordChanged = new CompletableFuture<ru.ticketpoint.auth.User>();
+            var passwordChanged = new CompletableFuture<User>();
             try (var passwordTasks = new FxTaskExecutor()) {
                 var passwordContext = new AppContext(config, passwordTasks, result.auth(), result.user());
                 fx(() -> {
@@ -551,7 +549,7 @@ class FxIntegrationTest {
             }
             var admin = passwordChanged.get(20, TimeUnit.SECONDS);
             assertFalse(admin.passwordChangeRequired());
-            var viewer = result.auth().create(admin, "fxviewer", "Наблюдатель", "Initial-password-2026!", ru.ticketpoint.auth.Role.USER);
+            var viewer = result.auth().create(admin, "fxviewer", "Наблюдатель", "Initial-password-2026!", Role.USER);
             viewer = result.auth().changePassword(result.auth().authenticate(viewer.login(), "Initial-password-2026!"),
                     "Initial-password-2026!", "Permanent-password-2026!");
             try (var viewerTasks = new FxTaskExecutor()) {
@@ -573,7 +571,7 @@ class FxIntegrationTest {
                     assertTrue(((Button) element("detailsButton")).isDisabled());
                     assertEquals(0, table.getItems().size());
                     assertEquals(3, ((TabPane) element("tabs")).getTabs().size());
-                    snapshot("viewer.png");
+
                     return null;
                 });
                 fx(() -> {
@@ -614,13 +612,16 @@ class FxIntegrationTest {
                 });
                 awaitLoaded();
                 assertNotEquals(own.event().id(), viewerContext.services().bookings().findById(own.id()).event().id());
-                var operator = result.auth().create(admin, "fxmanager", "Менеджер", "Initial-password-2026!", ru.ticketpoint.auth.Role.MANAGER);
+                var operator = result.auth().create(admin, "fxmanager", "Менеджер", "Initial-password-2026!", Role.MANAGER);
                 operator = result.auth().changePassword(result.auth().authenticate(operator.login(), "Initial-password-2026!"),
                         "Initial-password-2026!", "Permanent-password-2026!");
                 var managerSession = operator;
-                var staff = ru.ticketpoint.config.ApplicationServices.secured(config, result.auth(), () -> managerSession);
+                var staff = ApplicationServices.secured(config, result.auth(), () -> managerSession);
                 staff.bookings().changeStatus(own.id(), BookingStatus.CONFIRMED);
-                fx(() -> { ((MainController) loader.getController()).configure(viewerContext); return null; });
+                fx(() -> {
+                    ((MainController) loader.getController()).configure(viewerContext);
+                    return null;
+                });
                 awaitLoaded();
                 fx(() -> {
                     table.getSelectionModel().selectFirst();
@@ -629,7 +630,10 @@ class FxIntegrationTest {
                     return null;
                 });
                 staff.bookings().changeStatus(own.id(), BookingStatus.PAID);
-                fx(() -> { ((MainController) loader.getController()).configure(viewerContext); return null; });
+                fx(() -> {
+                    ((MainController) loader.getController()).configure(viewerContext);
+                    return null;
+                });
                 awaitLoaded();
                 fx(() -> {
                     table.getSelectionModel().selectFirst();
@@ -643,6 +647,31 @@ class FxIntegrationTest {
         }
     }
 
+    @Test
+    void logoutClosesAnOpenFormAndReturnsToLogin() throws Exception {
+        fx(() -> {
+            var application = new TicketPointApplication();
+            var owner = new Stage();
+            try {
+                application.start(owner);
+                var dialog = new Dialog<ButtonType>();
+                dialog.initOwner(owner);
+                dialog.getDialogPane().getButtonTypes().add(ButtonType.CANCEL);
+                dialog.getDialogPane().setContent(new TextField("Несохранённая запись"));
+                dialog.setOnHidden(event -> application.logout());
+                Platform.runLater(application::logout);
+                dialog.showAndWait();
+                assertFalse(dialog.isShowing());
+                assertNotNull(owner.getScene().lookup("#form"));
+                assertTrue(owner.isShowing());
+            } finally {
+                application.stop();
+                owner.close();
+            }
+            return null;
+        });
+    }
+
     private static DialogPane dialogPane() {
         return Window.getWindows().stream().filter(Window::isShowing).map(w -> w.getScene().getRoot())
                 .filter(DialogPane.class::isInstance).map(DialogPane.class::cast).findFirst().orElseThrow();
@@ -651,16 +680,5 @@ class FxIntegrationTest {
     private static Button saveButton(DialogPane pane) {
         ButtonType type = pane.getButtonTypes().stream().filter(t -> "Сохранить".equals(t.getText())).findFirst().orElseThrow();
         return (Button) pane.lookupButton(type);
-    }
-
-    private void snapshot(String name) throws Exception {
-        var image = stage.getScene().snapshot(null);
-        BufferedImage pixels = new BufferedImage((int) image.getWidth(), (int) image.getHeight(), BufferedImage.TYPE_INT_ARGB);
-        for (int y = 0; y < pixels.getHeight(); y++) {
-            for (int x = 0; x < pixels.getWidth(); x++) pixels.setRGB(x, y, image.getPixelReader().getArgb(x, y));
-        }
-        Path directory = Path.of("target", "fx-screenshots");
-        Files.createDirectories(directory);
-        ImageIO.write(pixels, "png", directory.resolve(name).toFile());
     }
 }

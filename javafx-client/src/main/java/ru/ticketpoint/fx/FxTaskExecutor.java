@@ -1,17 +1,29 @@
 package ru.ticketpoint.fx;
 
-import javafx.concurrent.Task;
-
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
+import javafx.concurrent.Task;
+import ru.ticketpoint.auth.AuthException;
+
 public final class FxTaskExecutor implements AutoCloseable {
-    private Runnable sessionInvalid = () -> { };
-    void onSessionInvalid(Runnable action) { sessionInvalid = java.util.Objects.requireNonNull(action); }
-    private Runnable beforeOperation = () -> { };
-    void beforeOperation(Runnable check) { beforeOperation = java.util.Objects.requireNonNull(check); }
+    private Runnable sessionInvalid = () -> {
+    };
+
+    void onSessionInvalid(Runnable action) {
+        sessionInvalid = Objects.requireNonNull(action);
+    }
+
+    private Runnable beforeOperation = () -> {
+    };
+
+    void beforeOperation(Runnable check) {
+        beforeOperation = Objects.requireNonNull(check);
+    }
+
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r, "ticketpoint-io");
         thread.setDaemon(true);
@@ -30,7 +42,7 @@ public final class FxTaskExecutor implements AutoCloseable {
         task.setOnFailed(event -> {
             Throwable error = task.getException();
             failure.accept(error);
-            if (error instanceof ru.ticketpoint.auth.AuthException auth && !auth.forbidden()
+            if (error instanceof AuthException auth && !auth.forbidden()
                     && (auth.getMessage().startsWith("Сеанс") || auth.getMessage().startsWith("Войдите"))) {
                 sessionInvalid.run();
             }

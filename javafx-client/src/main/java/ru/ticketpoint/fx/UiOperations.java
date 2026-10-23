@@ -1,10 +1,11 @@
 package ru.ticketpoint.fx;
 
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
+
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
-import java.util.concurrent.Callable;
-import java.util.function.Consumer;
 
 final class UiOperations {
     private final FxTaskExecutor executor;
@@ -43,7 +44,9 @@ final class UiOperations {
         });
     }
 
-    void message(String message) { status.setText(message); }
+    void message(String message) {
+        status.setText(message);
+    }
 
     private void busy(boolean value, String message) {
         workspace.setDisable(value);

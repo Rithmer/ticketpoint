@@ -1,5 +1,7 @@
 package ru.ticketpoint.fx;
 
+import java.io.IOException;
+
 import javafx.fxml.FXML;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -7,8 +9,6 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.stage.Window;
 import ru.ticketpoint.model.Booking;
-
-import java.io.IOException;
 
 public final class BookingDetailsController {
     @FXML

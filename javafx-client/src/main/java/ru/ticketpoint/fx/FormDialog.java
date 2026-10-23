@@ -1,14 +1,15 @@
 package ru.ticketpoint.fx;
 
+import java.io.IOException;
+import java.util.concurrent.Callable;
+import java.util.function.BiConsumer;
+
+import javafx.event.ActionEvent;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.stage.Window;
 import ru.ticketpoint.model.Validation;
-
-import java.io.IOException;
-import java.util.concurrent.Callable;
-import java.util.function.BiConsumer;
 
 final class FormDialog {
     private final Dialog<ButtonType> dialog;
@@ -39,7 +40,7 @@ final class FormDialog {
     }
 
     void onSave(Runnable action) {
-        dialog.getDialogPane().lookupButton(save).addEventFilter(javafx.event.ActionEvent.ACTION, event -> {
+        dialog.getDialogPane().lookupButton(save).addEventFilter(ActionEvent.ACTION, event -> {
             event.consume();
             dialog.getDialogPane().lookupAll(".invalid").forEach(node -> node.getStyleClass().remove("invalid"));
             action.run();

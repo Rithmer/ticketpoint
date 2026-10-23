@@ -1,11 +1,12 @@
 package ru.ticketpoint.fx;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Window;
 import ru.ticketpoint.model.*;
-
-import java.util.List;
 
 public final class BookingDialogController {
     @FXML
@@ -41,10 +42,16 @@ public final class BookingDialogController {
 
     static void show(Window owner, AppContext context, List<Customer> customers, List<Event> events,
                      Booking booking, Runnable saved) {
+        show(owner, context, customers, events, booking, null, saved);
+    }
+
+    static void show(Window owner, AppContext context, List<Customer> customers, List<Event> events,
+                     Booking booking, Event selectedEvent, Runnable saved) {
         FormDialog.<BookingDialogController>show(owner, "booking-dialog.fxml",
                 booking == null ? "Новое бронирование" : "Редактирование бронирования",
                 booking == null ? null : booking.ticketNumber(), (controller, form) -> {
                     controller.configure(form, context, customers, events, booking, saved);
+                    if (selectedEvent != null) controller.event.setValue(selectedEvent);
                     form.onSave(controller::save);
                 });
     }
@@ -56,8 +63,8 @@ public final class BookingDialogController {
         this.booking = booking;
         this.saved = saved;
         customer.getItems().setAll(customers);
-        event.getItems().setAll(events.stream().filter(e -> e.startsAt()
-                .isAfter(java.time.LocalDateTime.now(context.services().clock()))).toList());
+        event.getItems().setAll(events.stream().filter(e -> e.active() && e.startsAt()
+                .isAfter(LocalDateTime.now(context.services().clock()))).toList());
         if (booking == null) {
             editRules.setText("Заявка поступит менеджеру для подтверждения. Цена определяется тарифом мероприятия.");
             if (context.isCustomer()) {
@@ -73,16 +80,17 @@ public final class BookingDialogController {
             event.setValue(events.stream().filter(e -> e.id().equals(booking.event().id()))
                     .findFirst().orElse(booking.event()));
             boolean editable = booking.status() == BookingStatus.NEW && booking.event().startsAt()
-                    .isAfter(java.time.LocalDateTime.now(context.services().clock()));
+                    .isAfter(LocalDateTime.now(context.services().clock()));
             customer.setDisable(!editable || context.isCustomer());
             event.setDisable(!editable);
             editRules.setText(context.isCustomer()
                     ? (editable ? "Можно выбрать другое мероприятие по его текущей цене или отменить заявку. Подтверждает заявку менеджер."
-                        : "Заявка подтверждена менеджером. До оплаты и начала мероприятия её можно отменить. По другим вопросам обратитесь к менеджеру.")
+                    : "Заявка подтверждена менеджером. До оплаты и начала мероприятия её можно отменить. По другим вопросам обратитесь к менеджеру.")
                     : (editable ? "Можно исправить клиента и мероприятие, подтвердить или отменить заявку. При смене мероприятия применяется его текущая цена."
-                        : "Реквизиты зафиксированы. Подтверждённую заявку можно вернуть на исправление, отметить оплату или отменить. Оплаченный билет можно только отменить."));
+                    : "Реквизиты зафиксированы. Подтверждённую заявку можно вернуть на исправление, отметить оплату или отменить. Оплаченный билет можно только отменить."));
             status.getItems().setAll(context.statuses(booking));
-            status.setValue(booking.status());
+            status.setValue(context.isCustomer() && booking.status() == BookingStatus.CONFIRMED
+                    ? BookingStatus.CANCELLED : booking.status());
             price.setText(booking.priceAtBooking() + " ₽");
         }
     }
@@ -94,14 +102,14 @@ public final class BookingDialogController {
         if (selectedCustomer == null) {
             form.invalid(customer);
             errorLabel.setText(customer.getItems().isEmpty()
-                    ? "Клиентов пока нет. Сначала добавьте клиента на вкладке «Клиенты и мероприятия»."
+                    ? "Не удалось найти профиль покупателя. Обратитесь к администратору."
                     : "Выберите клиента из списка.");
             return;
         }
         if (selectedEvent == null) {
             form.invalid(event);
             errorLabel.setText(event.getItems().isEmpty()
-                    ? "Мероприятий пока нет. Сначала добавьте мероприятие на вкладке «Клиенты и мероприятия»."
+                    ? "Сейчас нет мероприятий, доступных для бронирования. Загляните позже."
                     : "Выберите мероприятие из списка.");
             return;
         }
@@ -116,9 +124,9 @@ public final class BookingDialogController {
             form.close();
             return;
         }
-        form.submit(context.tasks(), () -> booking == null
-                ? context.services().bookings().createBooking(selectedCustomer.id(), selectedEvent.id())
-                : context.services().bookings().updateBooking(booking, selectedCustomer.id(), selectedEvent.id(), selectedStatus),
+        form.submit(context.getTasks(), () -> booking == null
+                        ? context.services().bookings().createBooking(selectedCustomer.id(), selectedEvent.id())
+                        : context.services().bookings().updateBooking(booking, selectedCustomer.id(), selectedEvent.id(), selectedStatus),
                 errorLabel, saved);
     }
 }

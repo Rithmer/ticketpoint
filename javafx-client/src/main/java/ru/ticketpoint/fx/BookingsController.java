@@ -1,5 +1,8 @@
 package ru.ticketpoint.fx;
 
+import java.io.File;
+import java.util.List;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -9,9 +12,6 @@ import javafx.scene.control.*;
 import javafx.stage.FileChooser;
 import ru.ticketpoint.model.*;
 import ru.ticketpoint.service.BookingFilter;
-
-import java.io.File;
-import java.util.List;
 
 public final class BookingsController {
     @FXML
@@ -40,7 +40,8 @@ public final class BookingsController {
     private Button deleteButton;
     @FXML
     private Button detailsButton;
-    @FXML private Label heading;
+    @FXML
+    private Label heading;
     private final ObservableList<Booking> source = FXCollections.observableArrayList();
     private final FilteredList<Booking> filtered = new FilteredList<>(source);
     private final SortedList<Booking> sorted = new SortedList<>(filtered);
@@ -88,7 +89,7 @@ public final class BookingsController {
         this.context = context;
         this.refresh = refresh;
         this.operations = operations;
-        addButton.setDisable(false);
+        addButton.setDisable(!context.canWrite() && !context.isCustomer());
         heading.setText(context.isCustomer() ? "Мои заявки и билеты" : "Заявки и билеты клиентов");
         addButton.setText(context.isCustomer() ? "+ Забронировать билет" : "+ Новое бронирование");
         customerFilter.setVisible(!context.isCustomer());
@@ -187,7 +188,7 @@ public final class BookingsController {
         confirmation.setTitle("Удаление бронирования");
         confirmation.setHeaderText("Удалить билет " + booking.ticketNumber() + "?");
         confirmation.setContentText(booking.customer().name() + " • " + booking.event().title()
-                + "\nЗапись будет удалена из базы данных. Это действие нельзя отменить.");
+                + "\nБронирование будет убрано из списка. История сохранится в архиве, если он доступен.");
         if (confirmation.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
             operations.run(() -> {
                         context.services().bookings().delete(booking.id());

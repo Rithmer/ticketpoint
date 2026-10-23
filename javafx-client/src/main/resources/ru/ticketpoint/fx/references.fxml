@@ -8,15 +8,18 @@
         <Label text="Клиенты" styleClass="heading"/>
         <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="editCustomerButton" text="Изменить" onAction="#editCustomer" disable="true"/>
-        <Button fx:id="deleteCustomerButton" text="Удалить" onAction="#deleteCustomer" disable="true" styleClass="danger"/>
+        <Button fx:id="deleteCustomerButton" text="Удалить" onAction="#deleteCustomer" disable="true"
+                styleClass="danger"/>
         <Button fx:id="addCustomerButton" text="+ Новый клиент" onAction="#addCustomer" styleClass="primary"/>
     </HBox>
     <TableView fx:id="customerTable" VBox.vgrow="ALWAYS"/>
     <HBox alignment="CENTER_LEFT" spacing="12">
         <Label text="Мероприятия" styleClass="heading"/>
         <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="bookEventButton" text="Забронировать" onAction="#bookEvent" disable="true" styleClass="primary"/>
         <Button fx:id="editEventButton" text="Изменить" onAction="#editEvent" disable="true"/>
-        <Button fx:id="deleteEventButton" text="Удалить" onAction="#deleteEvent" disable="true" styleClass="danger"/>
+        <Button fx:id="deleteEventButton" text="Убрать из афиши" onAction="#deleteEvent" disable="true"
+                styleClass="danger"/>
         <Button fx:id="addEventButton" text="+ Новое мероприятие" onAction="#addEvent" styleClass="primary"/>
     </HBox>
     <TableView fx:id="eventTable" VBox.vgrow="ALWAYS"/>

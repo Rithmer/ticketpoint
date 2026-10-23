@@ -1,15 +1,17 @@
 package ru.ticketpoint.fx;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Window;
 import ru.ticketpoint.model.CreateEventCommand;
+import ru.ticketpoint.model.Event;
 import ru.ticketpoint.model.Validation;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeParseException;
 
 public final class EventDialogController {
     @FXML
@@ -29,19 +31,20 @@ public final class EventDialogController {
     private FormDialog form;
     private AppContext context;
     private Runnable saved;
-    private ru.ticketpoint.model.Event original;
+    private Event original;
 
     static void show(Window owner, AppContext context, Runnable saved) {
         show(owner, context, saved, null);
     }
 
-    static void show(Window owner, AppContext context, Runnable saved, ru.ticketpoint.model.Event original) {
+    static void show(Window owner, AppContext context, Runnable saved, Event original) {
         FormDialog.<EventDialogController>show(owner, "event-dialog.fxml", original == null ? "Новое мероприятие" : "Изменить мероприятие", null, (controller, form) -> {
             controller.original = original;
             if (original != null) {
-                controller.name.setText(original.title()); controller.venue.setText(original.venue());
+                controller.name.setText(original.title());
+                controller.venue.setText(original.venue());
                 controller.day.setValue(original.startsAt().toLocalDate());
-                controller.time.setText(original.startsAt().toLocalTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")));
+                controller.time.setText(original.startsAt().toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm")));
                 controller.price.setText(original.price().toPlainString());
             }
             controller.form = form;
@@ -61,7 +64,7 @@ public final class EventDialogController {
             CreateEventCommand command = new CreateEventCommand(form.text(name, "Название мероприятия", 200),
                     form.text(venue, "Место проведения", 200),
                     LocalDateTime.of(day.getValue(), parseTime()), parsePrice());
-            form.submit(context.tasks(), () -> original == null ? context.services().events().create(command) : context.services().events().update(original.id(), command), errorLabel, saved);
+            form.submit(context.getTasks(), () -> original == null ? context.services().events().create(command) : context.services().events().update(original.id(), command), errorLabel, saved);
         } catch (IllegalArgumentException error) {
             errorLabel.setText(error.getMessage());
         }

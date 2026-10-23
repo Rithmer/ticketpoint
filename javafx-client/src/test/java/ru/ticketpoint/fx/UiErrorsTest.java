@@ -1,21 +1,35 @@
 package ru.ticketpoint.fx;
 
+import java.io.IOException;
+import java.sql.SQLException;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ru.ticketpoint.exception.DataAccessException;
 import ru.ticketpoint.exception.EntityNotFoundException;
 
-import java.io.IOException;
-import java.sql.SQLException;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class UiErrorsTest {
+    @Test
+    void connectionConfigurationDoesNotAskBuyerToEditEnvironmentFiles() {
+        String message = UiErrors.message(new IllegalArgumentException("Заполните DB_PASSWORD в .env"));
+        assertTrue(message.contains("администратору"));
+        assertFalse(message.contains("DB_PASSWORD"));
+        assertFalse(message.contains(".env"));
+    }
+
+    @Test
+    void unexpectedValidationErrorDoesNotExposeEnglishImplementationDetails() {
+        String message = UiErrors.message(new IllegalArgumentException("Internal configuration value"));
+        assertEquals("Проверьте введённые данные и повторите действие.", message);
+    }
+
     @ParameterizedTest
-    @CsvSource({"08001, PostgreSQL", "08006, PostgreSQL", "57P01, PostgreSQL", "57P03, PostgreSQL",
-            "28P01, пароль", "28000, пароль", "3D000, таблиц", "42P01, таблиц", "42703, таблиц",
-            "42704, таблиц", "42501, прав", "57014, вовремя"})
+    @CsvSource({"08001, соединения", "08006, соединения", "57P01, соединения", "57P03, соединения",
+            "28P01, подключиться", "28000, подключиться", "3D000, загрузить", "42P01, загрузить", "42703, загрузить",
+            "42704, загрузить", "42501, прав", "57014, вовремя"})
     void explainsDatabaseFailureWithoutShowingTechnicalDetails(String state, String expected) {
         SQLException sql = new SQLException("SELECT secret FROM internal_table", state);
         String message = UiErrors.message(new DataAccessException("Internal failure", sql));
