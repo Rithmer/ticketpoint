@@ -29,10 +29,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * Runs only against an explicitly supplied, isolated test database. Includes real Flyway and
- * PostgreSQL enum mapping.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named = "KR3_TEST_DB_URL", matches = ".+")

@@ -17,7 +17,6 @@ class EnvironmentFileTest {
     void readsDatabaseSettingsAndReferencesFromFile() throws Exception {
         Path file = directory.resolve(".env");
         Files.writeString(file, """
-                # Database settings
                 POSTGRES_USER=ticketpoint
                 POSTGRES_PASSWORD='test-password'
                 DB_USER=${POSTGRES_USER}
