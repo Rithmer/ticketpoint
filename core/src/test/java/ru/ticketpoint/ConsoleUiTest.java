@@ -44,7 +44,7 @@ class ConsoleUiTest {
     @Test
     void rejectsNonNumericIdAndKeepsSubmenu() {
         String output = run("3\n3\nabc\n0\n0\n");
-        assertTrue(output.contains("ID должен быть целым числом"));
+        assertTrue(output.contains("Номер записи должен быть целым числом"));
         assertEquals(2, output.split("=== Бронирования ===", -1).length - 1);
         assertEquals(0, databaseCalls.get());
     }

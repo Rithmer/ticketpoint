@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @EnabledIfEnvironmentVariable(named = "RUN_FX_TESTS", matches = "true")
 @EnabledIfEnvironmentVariable(named = "TEST_DB_URL", matches = ".+")
-class FxIntegrationTest {
+class JavaFxIntegrationTest {
     private static String schema;
     private static AppContext context;
     private Stage stage;

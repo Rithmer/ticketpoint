@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named = "KR3_TEST_DB_URL", matches = ".+")
-class Kr3IntegrationTest {
+class BackendApiIntegrationTest {
     @BeforeAll
     static void jsonPathProvider() {
         com.jayway.jsonpath.Configuration.setDefaults(new com.jayway.jsonpath.Configuration.Defaults() {

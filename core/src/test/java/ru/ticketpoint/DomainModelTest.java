@@ -16,7 +16,7 @@ import ru.ticketpoint.model.Event;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ModelTest {
+class DomainModelTest {
     private static final String CUSTOMER_CODE = "CUS-12345678-1234-1234-1234-1234567890AB";
 
     @ParameterizedTest

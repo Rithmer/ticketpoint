@@ -19,7 +19,7 @@ import ru.ticketpoint.model.Event;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ExcelExporterTest {
+class ExcelBookingExporterTest {
     @TempDir
     Path directory;
     private final ExcelBookingExporter exporter = new ExcelBookingExporter();
