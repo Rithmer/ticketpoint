@@ -19,6 +19,10 @@ public final class MainController {
     private TabPane tabs;
     @FXML
     private Label userInfo;
+    @FXML
+    private javafx.scene.control.Button passwordButton;
+    @FXML
+    private javafx.scene.control.Button sessionButton;
     private Runnable logout;
     @FXML
     private Label operationStatus;
@@ -56,6 +60,11 @@ public final class MainController {
 
     void configure(AppContext context) {
         this.context = context;
+        boolean guest = context.user() == null && context.auth() != null;
+        userInfo.setText(guest ? "Гость • Наблюдатель" : "");
+        passwordButton.setVisible(!guest);
+        passwordButton.setManaged(!guest);
+        sessionButton.setText(guest ? "Войти" : "Выйти");
         if (context.user() != null) userInfo.setText(context.user().name() + " • " + switch (context.user().role()) {
             case USER -> "Покупатель";
             case VIEWER -> "Наблюдатель";

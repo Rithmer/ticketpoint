@@ -459,6 +459,44 @@ class JavaFxIntegrationTest {
     }
 
     @Test
+    void guestEntersWithoutCredentialsAndCannotWrite() throws Exception {
+        String url = System.getenv("TEST_DB_URL");
+        var config = new DatabaseConfig(url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema,
+                System.getenv("TEST_DB_USER"), System.getenv("TEST_DB_PASSWORD"), ZoneId.of("Europe/Moscow"), 5, 15, 30);
+        var entered = new CompletableFuture<LoginController.Authenticated>();
+        try (var tasks = new FxTaskExecutor()) {
+            fx(() -> {
+                var guestLoader = new FXMLLoader(UiResources.location("login.fxml"));
+                Parent root = guestLoader.load();
+                stage.setScene(new Scene(root, 720, 680));
+                LoginController controller = guestLoader.getController();
+                controller.configure(tasks, entered::complete, () -> config,
+                        () -> { throw new AssertionError("Guest must not initialize an admin"); });
+                ((Button) root.lookup("#guestButton")).fire();
+                return null;
+            });
+            var result = entered.get(20, TimeUnit.SECONDS);
+            assertNull(result.user());
+            try (var sessionTasks = new FxTaskExecutor()) {
+                var guest = new AppContext(config, sessionTasks, result.auth(), null);
+                assertFalse(guest.canWrite());
+                assertFalse(guest.isAdmin());
+                assertFalse(guest.services().bookings().findAll().isEmpty());
+                assertThrows(ru.ticketpoint.auth.AuthException.class,
+                        () -> guest.services().customers().create(null));
+                fx(() -> {
+                    var main = new FXMLLoader(UiResources.location("main.fxml"));
+                    stage.setScene(new Scene(main.load(), 1280, 780));
+                    ((MainController) main.getController()).configure(guest);
+                    assertEquals("Гость • Наблюдатель", ((Label) stage.getScene().lookup("#userInfo")).getText());
+                    assertFalse(stage.getScene().lookup("#passwordButton").isVisible());
+                    return null;
+                });
+            }
+        }
+    }
+
+    @Test
     void selfRegistrationValidatesAndSignsInBuyerThroughFxml() throws Exception {
         String url = System.getenv("TEST_DB_URL");
         var config = new DatabaseConfig(url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema,

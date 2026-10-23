@@ -9,8 +9,8 @@
                 <Label text="Билетная касса" styleClass="brand"/>
                 <Region HBox.hgrow="ALWAYS"/>
                 <Label fx:id="userInfo" styleClass="muted"/>
-                <Button text="Сменить пароль" onAction="#changePassword"/>
-                <Button text="Выйти" onAction="#signOut"/>
+                <Button fx:id="passwordButton" text="Сменить пароль" onAction="#changePassword"/>
+                <Button fx:id="sessionButton" text="Выйти" onAction="#signOut"/>
             </HBox>
         </VBox>
     </top>

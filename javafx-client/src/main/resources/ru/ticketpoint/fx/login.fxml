@@ -28,6 +28,7 @@
                     styleClass="primary"/>
             <Button text="Уже есть аккаунт? Войти" onAction="#showSignIn" maxWidth="Infinity"/>
         </VBox>
+        <Button id="guestButton" text="Смотреть бронирования без входа" onAction="#enterGuest" maxWidth="Infinity" disable="${progress.visible}"/>
         <ProgressIndicator fx:id="progress" visible="false" prefWidth="24" prefHeight="24"/>
         <Label fx:id="feedback" styleClass="error" wrapText="true"/>
     </VBox>

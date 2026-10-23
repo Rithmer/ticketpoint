@@ -40,6 +40,7 @@ public record AccessPolicy(Runnable read, Runnable write, Supplier<User> actor) 
 
     public void admin() {
         read.run();
+        write.run();
         User user = actor.get();
         if (user != null && user.role() != Role.ADMIN)
             throw new AuthException("Доступ разрешён только администратору", true);

@@ -84,6 +84,11 @@ public final class LoginController {
     }
 
     @FXML
+    private void enterGuest() {
+        submit(auth -> null, false);
+    }
+
+    @FXML
     private void showRegistration() {
         switchForm(true);
     }
@@ -127,6 +132,10 @@ public final class LoginController {
     }
 
     private void submit(Function<AuthService, User> action) {
+        submit(action, true);
+    }
+
+    private void submit(Function<AuthService, User> action, boolean initializeAdmin) {
         form.setDisable(true);
         registrationForm.setDisable(true);
         progress.setVisible(true);
@@ -136,7 +145,7 @@ public final class LoginController {
             var connections = new JdbcConnectionProvider(config);
             new DatabasePreflight(connections).verify();
             AuthService auth = new AuthService(new JdbcUserRepository(connections), Clock.system(config.zone()));
-            auth.initialize(bootstrap.get());
+            if (initializeAdmin) auth.initialize(bootstrap.get());
             return new Authenticated(config, auth, action.apply(auth));
         }, result -> {
             clearPasswords();

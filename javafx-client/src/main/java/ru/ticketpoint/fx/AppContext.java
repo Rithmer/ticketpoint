@@ -27,8 +27,9 @@ public final class AppContext {
         this.tasks = tasks;
         this.auth = auth;
         this.user = user;
-        services = ApplicationServices.secured(config, auth, this::sessionUser);
-        tasks.beforeOperation(() -> auth.current(sessionUser()));
+        services = user == null ? ApplicationServices.guest(config)
+                : ApplicationServices.secured(config, auth, this::sessionUser);
+        if (user != null) tasks.beforeOperation(() -> auth.current(sessionUser()));
     }
 
     private User sessionUser() {

@@ -57,7 +57,7 @@ public final class TicketPointApplication extends Application {
             context.getTasks().onSessionInvalid(this::logout);
             expiry.setOnFinished(event -> logout());
             expiry.playFromStart();
-            if (result.user().passwordChangeRequired()) {
+            if (result.user() != null && result.user().passwordChangeRequired()) {
                 PasswordDialogController.show(stage, context, this::openWorkspace, this::logout);
             } else openWorkspace();
         });

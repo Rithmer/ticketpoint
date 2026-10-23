@@ -32,6 +32,13 @@ public record ApplicationServices(BookingService bookings, CustomerService custo
         return create(connections, clock, AccessPolicy.TRUSTED);
     }
 
+    public static ApplicationServices guest(DatabaseConfig config) {
+        return create(new JdbcConnectionProvider(config), Clock.system(config.zone()),
+                new AccessPolicy(() -> {}, () -> {
+                    throw new ru.ticketpoint.auth.AuthException("Для изменения данных войдите в систему", true);
+                }));
+    }
+
     public static ApplicationServices secured(DatabaseConfig config, AuthService auth,
                                               Supplier<User> user) {
         return create(new JdbcConnectionProvider(config), Clock.system(config.zone()),
