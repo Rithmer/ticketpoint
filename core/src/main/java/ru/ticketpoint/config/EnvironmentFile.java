@@ -30,7 +30,8 @@ public final class EnvironmentFile {
                 }
                 int separator = entry.indexOf('=');
                 if (separator < 1 || !entry.substring(0, separator).matches("[A-Z][A-Z0-9_]*")) {
-                    throw new IllegalArgumentException("Неверная строка " + number + " в .env. Используйте формат ИМЯ=значение");
+                    throw new IllegalArgumentException("В файле настроек неверно заполнена строка " + number
+                            + ". Используйте формат ИМЯ=значение.");
                 }
                 String name = entry.substring(0, separator);
                 String value = entry.substring(separator + 1).strip();
@@ -47,7 +48,8 @@ public final class EnvironmentFile {
                     while (references.find()) {
                         String replacement = values.get(references.group(1));
                         if (replacement == null) {
-                            throw new IllegalArgumentException("В .env не задана переменная " + references.group(1));
+                            throw new IllegalArgumentException("В файле настроек не задан параметр "
+                                    + references.group(1) + ". Проверьте его значение.");
                         }
                         references.appendReplacement(expanded, Matcher.quoteReplacement(replacement));
                     }
@@ -57,7 +59,7 @@ public final class EnvironmentFile {
                 values.put(name, value);
             }
         } catch (IOException error) {
-            throw new IllegalArgumentException("Не удалось прочитать .env. Проверьте доступ к файлу настроек", error);
+            throw new IllegalArgumentException("Не удалось прочитать файл настроек. Проверьте права доступа.", error);
         }
         return values;
     }

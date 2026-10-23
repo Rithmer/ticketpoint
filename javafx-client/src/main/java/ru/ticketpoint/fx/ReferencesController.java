@@ -134,10 +134,10 @@ public final class ReferencesController {
         Event selected = eventTable.getSelectionModel().getSelectedItem();
         if (selected == null) return;
         var confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                "Мероприятие станет недоступно для новых бронирований. История билетов сохранится.", ButtonType.OK, ButtonType.CANCEL);
+                "Мероприятие станет недоступно для новых бронирований. История билетов сохранится.", DialogButtons.CONFIRM, DialogButtons.CANCEL);
         confirmation.initOwner(eventTable.getScene().getWindow());
         confirmation.setHeaderText("Убрать «" + selected.title() + "» из афиши?");
-        if (confirmation.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK)
+        if (confirmation.showAndWait().orElse(DialogButtons.CANCEL) == DialogButtons.CONFIRM)
             context.getTasks().execute(() -> {
                         context.services().events().delete(selected.id());
                         return null;
@@ -147,10 +147,10 @@ public final class ReferencesController {
 
     private void remove(String name, Runnable action) {
         var owner = eventTable.getScene().getWindow();
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION, "Удалить «" + name + "»? Связанные с билетами записи удалить нельзя.", ButtonType.OK, ButtonType.CANCEL);
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION, "Удалить «" + name + "»? Связанные с билетами записи удалить нельзя.", DialogButtons.CONFIRM, DialogButtons.CANCEL);
         confirmation.initOwner(owner);
         confirmation.setHeaderText("Удаление записи");
-        if (confirmation.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK)
+        if (confirmation.showAndWait().orElse(DialogButtons.CANCEL) == DialogButtons.CONFIRM)
             context.getTasks().execute(() -> {
                 action.run();
                 return null;

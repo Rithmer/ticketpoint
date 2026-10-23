@@ -47,7 +47,7 @@ public final class ConsoleUi {
 
     public void run() {
         try {
-            menu("Билетный оператор TicketPoint", """
+            menu("Билетная касса", """
                     1. Клиенты
                     2. Мероприятия
                     3. Бронирования
@@ -55,8 +55,8 @@ public final class ConsoleUi {
                     5. Фильтрация
                     6. Сортировка
                     7. Статистика
-                    8. Экспорт в Excel
-                    9. Таблицы базы данных
+                    8. Сохранить таблицу бронирований
+                    9. Сведения о базе данных
                     0. Выход
                     """, command -> {
                 switch (command) {
@@ -68,7 +68,7 @@ public final class ConsoleUi {
                     case "6" -> sortMenu();
                     case "7" -> statistics();
                     case "8" -> export();
-                    case "9" -> print(metadata.tableNames());
+                    case "9" -> print(metadata.tableNames().stream().map(ConsoleUi::tableName).toList());
                     default -> unknown();
                 }
             });
@@ -101,22 +101,22 @@ public final class ConsoleUi {
 
     private void bookingsMenu() {
         menu("Бронирования", """
-                1. Создать по ID клиента и мероприятия
+                1. Создать по номерам клиента и мероприятия
                 2. Список
-                3. Получить по ID
+                3. Найти по номеру
                 4. Изменить статус
                 5. Удалить
                 0. Назад
                 """, command -> {
             switch (command) {
-                case "1" -> printItem(bookings.createBooking(input.readId("ID клиента: "),
-                        input.readId("ID мероприятия: ")));
+                case "1" -> printItem(bookings.createBooking(input.readId("Номер клиента: "),
+                        input.readId("Номер мероприятия: ")));
                 case "2" -> print(bookings.findAll());
-                case "3" -> printItem(bookings.findById(input.readId("ID бронирования: ")));
-                case "4" -> printItem(bookings.changeStatus(input.readId("ID бронирования: "),
+                case "3" -> printItem(bookings.findById(input.readId("Номер бронирования: ")));
+                case "4" -> printItem(bookings.changeStatus(input.readId("Номер бронирования: "),
                         input.readStatus()));
                 case "5" -> {
-                    bookings.delete(input.readId("ID бронирования: "));
+                    bookings.delete(input.readId("Номер бронирования: "));
                     output.println("Бронирование удалено.");
                 }
                 default -> unknown();
@@ -138,7 +138,7 @@ public final class ConsoleUi {
         menu("Фильтрация", "1. По статусу\n2. По клиенту\n0. Назад", command -> {
             switch (command) {
                 case "1" -> print(bookings.filterByStatus(input.readStatus()));
-                case "2" -> print(bookings.filterByCustomer(input.readId("ID клиента: ")));
+                case "2" -> print(bookings.filterByCustomer(input.readId("Номер клиента: ")));
                 default -> unknown();
             }
         });
@@ -170,10 +170,10 @@ public final class ConsoleUi {
     }
 
     private void export() throws IOException {
-        String name = "bookings-" + EXPORT_TIMESTAMP.format(LocalDateTime.now(clock)) + ".xlsx";
+        String name = "бронирования-" + EXPORT_TIMESTAMP.format(LocalDateTime.now(clock)) + ".xlsx";
         Path path = Path.of("exports", name);
         exporter.export(bookings.findAll(), path);
-        output.println("Экспорт сохранён: " + path.toAbsolutePath());
+        output.println("Таблица сохранена: " + path.toAbsolutePath());
     }
 
     private void menu(String title, String options, Action action) {
@@ -215,6 +215,16 @@ public final class ConsoleUi {
 
     private void unknown() {
         output.println("Неизвестный пункт меню.");
+    }
+
+    private static String tableName(String name) {
+        return switch (name) {
+            case "app_users" -> "Пользователи";
+            case "bookings" -> "Бронирования";
+            case "customers" -> "Клиенты";
+            case "events" -> "Мероприятия";
+            default -> "Служебная таблица";
+        };
     }
 
     @FunctionalInterface

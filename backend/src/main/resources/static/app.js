@@ -83,7 +83,6 @@ const entityNames = {BOOKING: "Бронирование", USER: "Пользов�
 const write = () => ["ADMIN", "MANAGER"].includes(state.tokens?.user.role),
     admin = () => state.tokens?.user.role === "ADMIN";
 byId("apiDocs").href = "/swagger-ui.html";
-
 function message(text) {
     byId("message").textContent = text;
 }
@@ -513,7 +512,7 @@ byId("exportCsv").onclick = async () => {
         );
         const a = document.createElement("a");
         a.href = url;
-        a.download = "bookings.csv";
+        a.download = "бронирования.csv";
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (ex) {
@@ -525,7 +524,7 @@ byId("previewImport").onclick = async () => {
         state.preview = null;
         byId("applyImport").disabled = true;
         if (!byId("csvFile").files[0]) {
-            message("Выберите CSV-файл");
+            message("Выберите файл таблицы в формате .csv.");
             return;
         }
         const body = new FormData();
@@ -620,7 +619,7 @@ async function loadAnalytics() {
         total: "Всего бронирований",
         active: "Активные",
         archived: "Архивные",
-        vip: "VIP-бронирования",
+        vip: "Бронирования с VIP-отметкой",
         averagePrice: "Средняя цена",
     };
     byId("metrics").innerHTML = Object.entries(names)
@@ -718,7 +717,7 @@ async function loadUsers() {
     byId("userRows").innerHTML = users
         .map(
             (u) =>
-                `<article class="row"><b>${esc(u.name)}</b> · ${esc(u.login)} · ${u.role} · ${u.enabled ? "Активен" : "Отключён"}<button data-user="${u.id}">Изменить</button><button data-reset="${u.id}" class="secondary">Сбросить пароль</button></article>`,
+                `<article class="row"><b>${esc(u.name)}</b> · ${esc(u.login)} · ${esc(roles[u.role] || "Пользователь")} · ${u.enabled ? "Активен" : "Отключён"}<button data-user="${u.id}">Изменить</button><button data-reset="${u.id}" class="secondary">Сбросить пароль</button></article>`,
         )
         .join("");
     byId("usersInfo").textContent =
@@ -822,8 +821,8 @@ byId("nextAudit").onclick = () => {
 byId("copyToken").onclick = async () => {
     try {
         await navigator.clipboard.writeText(state.tokens.accessToken);
-        message("Токен скопирован. В Swagger нажмите Authorize и вставьте его.");
+        message("Ключ доступа скопирован.");
     } catch (ex) {
-        message("Не удалось скопировать токен: " + ex.message);
+        message("Не удалось скопировать ключ доступа. Попробуйте ещё раз.");
     }
 };

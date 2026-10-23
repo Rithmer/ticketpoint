@@ -38,15 +38,21 @@ final class ConsoleInput {
         try {
             return Long.parseLong(read(prompt));
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("ID должен быть целым числом", e);
+            throw new IllegalArgumentException("Номер записи должен быть целым числом", e);
         }
     }
 
     BookingStatus readStatus() {
         try {
-            return BookingStatus.valueOf(read("Статус (NEW, PAID, CANCELLED): ").toUpperCase(Locale.ROOT));
+            return switch (read("Статус (Новое, Подтверждено, Оплачено, Отменено): ").toLowerCase(Locale.ROOT)) {
+                case "новое", "новая заявка" -> BookingStatus.NEW;
+                case "подтверждено" -> BookingStatus.CONFIRMED;
+                case "оплачено" -> BookingStatus.PAID;
+                case "отменено" -> BookingStatus.CANCELLED;
+                default -> throw new IllegalArgumentException();
+            };
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Допустимые статусы: NEW, PAID, CANCELLED", e);
+            throw new IllegalArgumentException("Укажите один из статусов: новое, подтверждено, оплачено или отменено.", e);
         }
     }
 

@@ -23,6 +23,9 @@ import ru.ticketpoint.backend.security.CurrentUser;
 @Service
 public class CsvService {
     private static final String[] HEADERS = {
+            "Номер билета", "Номер клиента", "Код мероприятия", "Статус", "VIP", "Описание", "Метки"
+    };
+    private static final String[] LEGACY_HEADERS = {
             "ticketNumber", "customerId", "eventId", "status", "vip", "description", "tags"
     };
     private final BookingApplicationService bookings;
@@ -71,8 +74,8 @@ public class CsvService {
                             b.ticketNumber(),
                             b.customerId(),
                             b.eventId(),
-                            b.status(),
-                            b.vip(),
+                            statusName(b.status()),
+                            b.vip() ? "Да" : "Нет",
                             safe(b.description()),
                             String.join(";", new TreeSet<>(b.tags())));
             }
@@ -91,10 +94,10 @@ public class CsvService {
         if (!Set.of("NEW_ONLY", "UPSERT").contains(mode))
             throw ApiException.bad("Выберите режим импорта: только новые записи или создание и обновление.");
         if (file.isEmpty() || file.getSize() > 2 * 1024 * 1024)
-            throw ApiException.bad("Размер CSV: 1 байт .. 2 МБ");
+            throw ApiException.bad("Файл таблицы должен содержать от 1 байта до 2 МБ.");
         previews.entrySet().removeIf(e -> e.getValue().expires().isBefore(Instant.now()));
         if (previews.size() >= 100)
-            throw new ApiException(429, "Слишком много проверок CSV, повторите позже");
+            throw new ApiException(429, "Проверка выполняется слишком часто. Подождите немного и повторите попытку.");
         var rows = new ArrayList<Row>();
         var errors = new ArrayList<RowError>();
         var codes = new HashSet<String>();
@@ -116,37 +119,39 @@ public class CsvService {
                              .setIgnoreEmptyLines(true)
                              .get()
                              .parse(reader)) {
-            if (!parser.getHeaderNames().equals(List.of(HEADERS)))
-                throw ApiException.bad("Столбцы CSV: " + String.join(",", HEADERS));
+            List<String> headers = parser.getHeaderNames();
+            boolean legacyHeaders = headers.equals(List.of(LEGACY_HEADERS));
+            if (!headers.equals(List.of(HEADERS)) && !legacyHeaders)
+                throw ApiException.bad("Проверьте названия столбцов. Нужны: " + String.join(", ", HEADERS));
             for (var record : parser) {
                 long line = record.getRecordNumber() + 1;
-                if (line > 5001) throw ApiException.bad("Не более 5000 строк CSV");
+                if (line > 5001) throw ApiException.bad("В таблице должно быть не больше 5000 строк.");
                 try {
                     if (record.size() != HEADERS.length)
-                        throw ApiException.bad("Неверное количество столбцов");
-                    String code = record.get("ticketNumber").trim().toUpperCase(Locale.ROOT);
+                        throw ApiException.bad("Проверьте количество значений в этой строке.");
+                    String code = value(record, legacyHeaders, "ticketNumber", "Номер билета").trim().toUpperCase(Locale.ROOT);
                     if (!code.matches("[A-Z0-9][A-Z0-9-]{0,39}"))
-                        throw ApiException.bad("Неверный номер билета");
-                    if (!codes.add(code)) throw ApiException.bad("Повтор номера в файле");
+                        throw ApiException.bad("Укажите корректный номер билета.");
+                    if (!codes.add(code)) throw ApiException.bad("Номер билета повторяется в файле.");
                     var old = existing.get(code);
                     if (old != null && mode.equals("NEW_ONLY"))
-                        throw ApiException.bad("Билет уже существует");
-                    var status = BookingStatus.valueOf(record.get("status"));
-                    String vip = record.get("vip");
-                    if (!Set.of("true", "false").contains(vip))
-                        throw ApiException.bad("В столбце VIP укажите true (да) или false (нет).");
+                        throw ApiException.bad("Билет с таким номером уже существует.");
+                    var status = parseStatus(value(record, legacyHeaders, "status", "Статус"));
+                    String vip = value(record, legacyHeaders, "vip", "Особая отметка").trim();
+                    if (!Set.of("true", "false", "да", "нет").contains(vip.toLowerCase(Locale.ROOT)))
+                        throw ApiException.bad("В столбце «VIP» укажите «Да» или «Нет».");
                     Set<String> tags =
-                            record.get("tags").isBlank()
+                            value(record, legacyHeaders, "tags", "Метки").isBlank()
                                     ? Set.of()
-                                    : new LinkedHashSet<>(Arrays.asList(record.get("tags").split(";", -1)));
+                                    : new LinkedHashSet<>(Arrays.asList(value(record, legacyHeaders, "tags", "Метки").split(";", -1)));
                     var input =
                             new Requests.BookingInput(
                                     code,
-                                    Long.valueOf(record.get("customerId")),
-                                    UUID.fromString(record.get("eventId")),
+                                    Long.valueOf(value(record, legacyHeaders, "customerId", "Номер клиента")),
+                                    UUID.fromString(value(record, legacyHeaders, "eventId", "Код мероприятия")),
                                     status,
-                                    Boolean.parseBoolean(vip),
-                                    record.get("description"),
+                                    vip.equalsIgnoreCase("true") || vip.equalsIgnoreCase("да"),
+                                    value(record, legacyHeaders, "description", "Описание"),
                                     tags,
                                     old == null ? null : old.version());
                     var violations = validator.validate(input);
@@ -161,11 +166,11 @@ public class CsvService {
                                     line,
                                     ex instanceof ApiException
                                             ? ex.getMessage()
-                                            : "Проверьте идентификатор мероприятия, номер клиента и статус в этой строке."));
+                                            : "Проверьте код мероприятия, номер клиента и статус в этой строке."));
                 }
             }
         } catch (IOException | UncheckedIOException ex) {
-            throw ApiException.bad("Не удалось прочитать CSV");
+            throw ApiException.bad("Не удалось прочитать файл. Убедитесь, что это таблица в формате .csv.");
         }
         UUID id = UUID.randomUUID();
         Instant expiry = Instant.now().plusSeconds(900);
@@ -180,10 +185,10 @@ public class CsvService {
         if (checked == null
                 || !checked.owner().equals(current.get().getPublicId())
                 || checked.expires().isBefore(Instant.now()))
-            throw ApiException.bad("Проверка не найдена или устарела. Проверьте CSV заново");
+            throw ApiException.bad("Результат проверки устарел. Проверьте файл заново.");
         if (!checked.mode().equals(req.mode()))
-            throw ApiException.bad("Режим должен совпадать с предварительной проверкой");
-        if (!previews.remove(req.previewId(), checked)) throw ApiException.bad("Импорт уже применён");
+            throw ApiException.bad("Выберите тот же способ загрузки, который использовался при проверке.");
+        if (!previews.remove(req.previewId(), checked)) throw ApiException.bad("Эта загрузка уже выполнена.");
         int ok = 0;
         var errors = new ArrayList<>(checked.errors());
         for (var row : checked.rows())
@@ -195,8 +200,31 @@ public class CsvService {
                 errors.add(new RowError(row.number(), ex.getMessage()));
             } catch (DataAccessException ex) {
                 errors.add(
-                        new RowError(row.number(), "Данные изменены после проверки. Проверьте CSV заново"));
+                        new RowError(row.number(), "Данные изменились после проверки. Проверьте файл заново."));
             }
         return new ImportResult(ok, errors);
+    }
+
+    private static String value(CSVRecord record, boolean legacyHeaders, String legacy, String localized) {
+        return record.get(legacyHeaders ? legacy : localized);
+    }
+
+    private static BookingStatus parseStatus(String value) {
+        return switch (value.trim().toLowerCase(Locale.ROOT)) {
+            case "новое", "новая заявка", "new" -> BookingStatus.NEW;
+            case "подтверждено", "confirmed" -> BookingStatus.CONFIRMED;
+            case "оплачено", "paid" -> BookingStatus.PAID;
+            case "отменено", "cancelled" -> BookingStatus.CANCELLED;
+            default -> throw new IllegalArgumentException("Неизвестный статус");
+        };
+    }
+
+    private static String statusName(BookingStatus status) {
+        return switch (status) {
+            case NEW -> "Новое";
+            case CONFIRMED -> "Подтверждено";
+            case PAID -> "Оплачено";
+            case CANCELLED -> "Отменено";
+        };
     }
 }

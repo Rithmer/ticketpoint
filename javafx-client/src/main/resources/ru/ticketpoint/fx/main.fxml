@@ -6,7 +6,7 @@
     <top>
         <VBox spacing="5" styleClass="masthead">
             <HBox spacing="12" alignment="CENTER_LEFT">
-                <Label text="TicketPoint" styleClass="brand"/>
+                <Label text="Билетная касса" styleClass="brand"/>
                 <Region HBox.hgrow="ALWAYS"/>
                 <Label fx:id="userInfo" styleClass="muted"/>
                 <Button text="Сменить пароль" onAction="#changePassword"/>

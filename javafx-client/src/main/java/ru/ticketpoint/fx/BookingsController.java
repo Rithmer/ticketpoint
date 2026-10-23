@@ -189,7 +189,8 @@ public final class BookingsController {
         confirmation.setHeaderText("Удалить билет " + booking.ticketNumber() + "?");
         confirmation.setContentText(booking.customer().name() + " • " + booking.event().title()
                 + "\nБронирование будет убрано из списка. История сохранится в архиве, если он доступен.");
-        if (confirmation.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+        confirmation.getDialogPane().getButtonTypes().setAll(DialogButtons.CONFIRM, DialogButtons.CANCEL);
+        if (confirmation.showAndWait().orElse(DialogButtons.CANCEL) == DialogButtons.CONFIRM) {
             operations.run(() -> {
                         context.services().bookings().delete(booking.id());
                         return null;
@@ -205,8 +206,8 @@ public final class BookingsController {
         }
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Экспорт текущего списка бронирований");
-        chooser.setInitialFileName("bookings.xlsx");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Книга Excel (*.xlsx)", "*.xlsx"));
+        chooser.setInitialFileName("бронирования.xlsx");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Электронная таблица (*.xlsx)", "*.xlsx"));
         File file = chooser.showSaveDialog(bookingTable.getScene().getWindow());
         if (file == null) {
             return;
@@ -216,7 +217,8 @@ public final class BookingsController {
                     context.services().exporter().export(snapshot, file.toPath());
                     return file;
                 },
-                "Экспорт " + snapshot.size() + " бронирований…",
-                saved -> operations.message("Сохранено " + snapshot.size() + " бронирований: " + saved.getAbsolutePath()));
+                "Подготовка таблицы с " + snapshot.size() + " бронированиями…",
+                saved -> operations.message("Таблица сохранена. Количество бронирований: " + snapshot.size()
+                        + ". Файл: " + saved.getAbsolutePath()));
     }
 }

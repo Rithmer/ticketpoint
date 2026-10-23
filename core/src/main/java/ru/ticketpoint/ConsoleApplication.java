@@ -74,12 +74,12 @@ public final class ConsoleApplication {
             ApplicationServices services = ApplicationServices.jdbc(config);
             services.preflight().verify();
             if (checkOnly) {
-                output.println("Проверка конфигурации и схемы БД успешна.");
+                output.println("Настройки подключения и структура базы данных проверены.");
                 return 0;
             }
             if (export != null) {
                 services.exporter().export(services.bookings().findAll(), export);
-                output.println("Экспорт сохранён: " + export.toAbsolutePath());
+                output.println("Таблица сохранена: " + export.toAbsolutePath());
             } else {
                 new ConsoleUi(input, output, services.bookings(), services.customers(), services.events(),
                         services.metadata(), services.exporter(), services.clock()).run();
@@ -93,7 +93,7 @@ public final class ConsoleApplication {
             return 1;
         } catch (DataAccessException e) {
             AppLogging.technical("Выполнение команды", e);
-            errors.println("Ошибка базы данных: " + e.getMessage());
+            errors.println("Не удалось подключиться к базе данных. Проверьте настройки подключения и повторите попытку.");
             return 1;
         } catch (IOException | SQLException | RuntimeException e) {
             AppLogging.technical("Выполнение команды", e);
@@ -103,9 +103,9 @@ public final class ConsoleApplication {
     }
 
     private static void usage(PrintWriter output) {
-        output.println("TicketPoint: без аргументов — интерактивное меню");
-        output.println("  --help           показать справку");
-        output.println("  --check          проверить конфигурацию и схему БД");
-        output.println("  --export <путь>  экспортировать бронирования в Excel .xlsx");
+        output.println("Без параметров открывается меню управления бронированиями.");
+        output.println("  --help           показать эту справку");
+        output.println("  --check          проверить настройки и подключение к базе данных");
+        output.println("  --export <путь>  сохранить бронирования в электронной таблице (.xlsx)");
     }
 }

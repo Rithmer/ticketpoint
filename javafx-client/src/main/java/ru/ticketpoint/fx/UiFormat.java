@@ -42,7 +42,7 @@ final class UiFormat {
             return "Все статусы";
         }
         return switch (value) {
-            case NEW -> "Новое";
+            case NEW -> "Новая заявка";
             case CONFIRMED -> "Подтверждено";
             case PAID -> "Оплачено";
             case CANCELLED -> "Отменено";

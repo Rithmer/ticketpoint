@@ -3,14 +3,14 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>TicketPoint · Бронирования</title>
+    <title>Билетная касса · Бронирования</title>
     <link rel="stylesheet" href="/style.css"/>
     <script defer src="/app.js"></script>
 </head>
 <body>
 <header>
     <div>
-        <strong>TicketPoint</strong><span>Управление бронированиями</span>
+        <strong>Билетная касса</strong><span>Управление бронированиями</span>
     </div>
     <div id="identity"></div>
 </header>
@@ -18,7 +18,7 @@
     <div id="message" role="status" aria-live="polite"></div>
     <section id="login">
         <h1>Вход в систему</h1>
-        <p>Используйте учётную запись TicketPoint.</p>
+        <p>Войдите в свою учётную запись.</p>
         <form id="loginForm">
             <label
             >Логин<input name="login" required autocomplete="username"/></label
@@ -88,15 +88,8 @@
             <button data-tab="audit" class="admin">Аудит
             </button
             >
-            <a
-                    id="apiDocs"
-                    href="#"
-                    target="_blank"
-                    rel="noopener"
-                    class="admin"
-            >Swagger</a
-            >
-            <button id="copyToken" class="admin">Скопировать API-токен
+            <a id="apiDocs" href="#" target="_blank" rel="noopener" class="admin">Документация API</a>
+            <button id="copyToken" class="admin">Скопировать ключ доступа
             </button
             >
             <button id="passwordButton">Сменить пароль
@@ -175,7 +168,7 @@
                 <button type="reset" class="secondary">Сбросить</button>
             </form>
             <div class="toolbar">
-                <button id="exportCsv" class="secondary">Экспорт CSV</button>
+                <button id="exportCsv" class="secondary">Выгрузить таблицу</button>
                 <div class="writer">
                     <select aria-label="Массовое действие" id="bulkAction">
                         <option value="ARCHIVE">В архив</option>
@@ -229,13 +222,13 @@
                 <button id="nextPage" class="secondary">Далее</button>
             </div>
             <details class="writer">
-                <summary>Импорт CSV</summary>
+                <summary>Загрузить таблицу</summary>
                 <p>
                     Столбцы и пример формата доступны в экспорте. Новые билеты
                     создаются со статусом «Новое», цена берётся из мероприятия. После
                     проверки будут применены корректные строки.
                 </p>
-                <input aria-label="CSV-файл для импорта" id="csvFile" type="file" accept=".csv,text/csv"/><select
+                <input aria-label="Файл таблицы для загрузки (.csv)" id="csvFile" type="file" accept=".csv,text/csv"/><select
                     id="importMode" aria-label="Режим импорта"
             >
                 <option value="NEW_ONLY">Только новые</option>
@@ -287,7 +280,7 @@
                 <input
                         aria-label="Поиск по журналу аудита"
                         name="q"
-                        placeholder="Пользователь, событие, описание или Correlation ID"
+                        placeholder="Пользователь, событие, описание или номер запроса"
                 />
                 <button>Найти</button>
             </form>

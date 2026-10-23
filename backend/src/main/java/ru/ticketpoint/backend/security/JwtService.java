@@ -24,7 +24,7 @@ public class JwtService {
         this.key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
         this.issuer = issuer;
         this.minutes = minutes;
-        if (minutes < 1 || minutes > 60) throw new IllegalArgumentException("access-minutes: 1..60");
+        if (minutes < 1 || minutes > 60) throw new IllegalArgumentException("Время действия сеанса должно быть от 1 до 60 минут.");
     }
 
     public Instant expiry() {

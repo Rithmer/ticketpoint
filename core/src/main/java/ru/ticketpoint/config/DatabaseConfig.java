@@ -13,24 +13,23 @@ public record DatabaseConfig(String url, String user, String password, ZoneId zo
                              int socketTimeoutSeconds) {
     public DatabaseConfig {
         if (url == null || url.isBlank() || !url.startsWith("jdbc:postgresql:")) {
-            throw new IllegalArgumentException("DB_URL должен быть непустым JDBC URL PostgreSQL");
+            throw new IllegalArgumentException("В настройках не указан адрес базы данных PostgreSQL.");
         }
         if (user == null || user.isBlank()) {
-            throw new IllegalArgumentException("DB_USER не должен быть пустым");
+            throw new IllegalArgumentException("В настройках не указано имя пользователя базы данных.");
         }
         if (password == null || password.isBlank()) {
-            throw new IllegalArgumentException("Не задан пароль базы данных. Заполните DB_PASSWORD в .env "
-                    + "или POSTGRES_PASSWORD, если DB_PASSWORD ссылается на него");
+            throw new IllegalArgumentException("Не задан пароль базы данных. Проверьте файл настроек подключения.");
         }
-        Objects.requireNonNull(zone, "APP_ZONE обязателен");
+        Objects.requireNonNull(zone, "Часовой пояс должен быть указан");
         if (!ZoneId.getAvailableZoneIds().contains(zone.getId())) {
-            throw new IllegalArgumentException("APP_ZONE должен быть именем зоны, например Europe/Moscow или UTC");
+            throw new IllegalArgumentException("Укажите корректный часовой пояс, например Europe/Moscow или UTC.");
         }
         validateTimeout("DB_CONNECT_TIMEOUT_SECONDS", connectTimeoutSeconds);
         validateTimeout("DB_STATEMENT_TIMEOUT_SECONDS", statementTimeoutSeconds);
         validateTimeout("DB_SOCKET_TIMEOUT_SECONDS", socketTimeoutSeconds);
         if (socketTimeoutSeconds <= statementTimeoutSeconds) {
-            throw new IllegalArgumentException("DB_SOCKET_TIMEOUT_SECONDS должен быть больше DB_STATEMENT_TIMEOUT_SECONDS");
+            throw new IllegalArgumentException("Время ожидания соединения должно быть больше времени ожидания запроса.");
         }
     }
 
@@ -43,7 +42,7 @@ public record DatabaseConfig(String url, String user, String password, ZoneId zo
         try {
             zone = ZoneId.of(environment.getOrDefault("APP_ZONE", "Europe/Moscow"));
         } catch (DateTimeException e) {
-            throw new IllegalArgumentException("Некорректный APP_ZONE: укажите имя зоны, например Europe/Moscow", e);
+            throw new IllegalArgumentException("Указан неизвестный часовой пояс. Проверьте файл настроек.", e);
         }
         return new DatabaseConfig(
                 environment.getOrDefault("DB_URL", "jdbc:postgresql://localhost:5432/ticketpoint"),
@@ -58,13 +57,13 @@ public record DatabaseConfig(String url, String user, String password, ZoneId zo
         try {
             return Integer.parseInt(environment.getOrDefault(name, Integer.toString(fallback)));
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException(name + " должен быть целым числом секунд от 1 до 86400");
+            throw new IllegalArgumentException("В настройках времени ожидания укажите целое число секунд от 1 до 86400.");
         }
     }
 
     private static void validateTimeout(String name, int value) {
         if (value < 1 || value > 86400) {
-            throw new IllegalArgumentException(name + " должен быть от 1 до 86400 секунд");
+            throw new IllegalArgumentException("Время ожидания должно составлять от 1 до 86400 секунд.");
         }
     }
 

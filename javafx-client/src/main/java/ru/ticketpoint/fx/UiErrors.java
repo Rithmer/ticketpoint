@@ -69,7 +69,7 @@ final class UiErrors {
     }
 
     static void show(Window owner, Throwable error) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
+        Alert alert = new Alert(Alert.AlertType.ERROR, null, DialogButtons.CLOSE);
         alert.initOwner(owner);
         alert.setTitle("Ошибка");
         alert.setHeaderText("Операция не выполнена");

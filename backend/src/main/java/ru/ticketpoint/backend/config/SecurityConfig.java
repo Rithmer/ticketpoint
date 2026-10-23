@@ -103,7 +103,7 @@ public class SecurityConfig {
     @Bean
     OpenAPI openAPI() {
         return new OpenAPI()
-                .info(new Info().title("TicketPoint API").version("3"))
+                .info(new Info().title("Программный интерфейс билетной кассы").version("3"))
                 .components(
                         new Components()
                                 .addSecuritySchemes(

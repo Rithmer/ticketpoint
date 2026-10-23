@@ -20,7 +20,7 @@ public final class ConsoleFormatter {
                             booking.event().id(), booking.event().title(),
                             booking.event().venue(),
                             DATE.format(booking.event().startsAt()),
-                            booking.priceAtBooking().toPlainString(), booking.status());
+                            booking.priceAtBooking().toPlainString(), statusName(booking.status()));
         }
         if (item instanceof Customer(Long id, String code, String name)) {
             return "Клиент #%s: %s [%s]".formatted(id, name, code);
@@ -33,5 +33,14 @@ public final class ConsoleFormatter {
             return text;
         }
         throw new IllegalArgumentException("Неподдерживаемый тип для консольного вывода");
+    }
+
+    private static String statusName(ru.ticketpoint.model.BookingStatus status) {
+        return switch (status) {
+            case NEW -> "Новое";
+            case CONFIRMED -> "Подтверждено";
+            case PAID -> "Оплачено";
+            case CANCELLED -> "Отменено";
+        };
     }
 }

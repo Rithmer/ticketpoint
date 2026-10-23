@@ -21,7 +21,7 @@ public final class DatabasePreflight {
                     || result.getString(1) == null
                     || result.getString(2) == null
                     || result.getString(3) == null) {
-                throw new SQLException("Не найдены обязательные таблицы customers, events и bookings", "42P01");
+                throw new SQLException("В базе данных отсутствуют необходимые таблицы. Обратитесь к администратору.", "42P01");
             }
         }
     }

@@ -16,7 +16,7 @@ public record Customer(Long id, String customerCode, String name) {
     public static String normalizeCode(String code) {
         String normalized = Validation.text(code, "Код клиента", 40).toUpperCase(Locale.ROOT);
         if (!CODE.matcher(normalized).matches()) {
-            throw new IllegalArgumentException("Код клиента должен иметь формат CUS-<UUID>");
+            throw new IllegalArgumentException("Код клиента указан неверно. Проверьте его и повторите действие.");
         }
         return normalized;
     }

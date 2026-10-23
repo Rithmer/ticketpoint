@@ -67,10 +67,10 @@ public final class UsersController {
         User user = table.getSelectionModel().getSelectedItem();
         if (user == null) return;
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, (user.enabled() ? "Отключить" : "Включить")
-                + " доступ для «" + user.login() + "»?", ButtonType.OK, ButtonType.CANCEL);
+                + " доступ для «" + user.login() + "»?", DialogButtons.CONFIRM, DialogButtons.CANCEL);
         alert.initOwner(table.getScene().getWindow());
         alert.setHeaderText("Изменение доступа");
-        if (alert.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+        if (alert.showAndWait().orElse(DialogButtons.CANCEL) != DialogButtons.CONFIRM) return;
         operations.run(() -> {
                     context.requireAuth().setEnabled(context.user(), user.id(), !user.enabled());
                     return null;

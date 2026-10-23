@@ -19,7 +19,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import ru.ticketpoint.model.Booking;
 
 public final class ExcelBookingExporter implements BookingExporter {
-    private static final List<String> HEADINGS = List.of("ID", "Номер билета", "Код клиента", "Клиент",
+    private static final List<String> HEADINGS = List.of("Номер записи", "Номер билета", "Код клиента", "Клиент",
             "Мероприятие", "Место", "Дата мероприятия", "Цена при бронировании, руб.", "Статус");
     private static final int[] WIDTHS = {10, 43, 43, 27, 35, 35, 23, 17, 16};
 
@@ -57,12 +57,12 @@ public final class ExcelBookingExporter implements BookingExporter {
     private static List<Booking> validatedSnapshot(List<Booking> bookings) {
         List<Booking> snapshot = List.copyOf(bookings);
         if (snapshot.size() >= SpreadsheetVersion.EXCEL2007.getMaxRows()) {
-            throw new IllegalArgumentException("Слишком много бронирований для одного листа Excel");
+            throw new IllegalArgumentException("Слишком много бронирований для одного листа таблицы");
         }
         for (Booking booking : snapshot) {
             int year = booking.event().startsAt().getYear();
             if (year < 1900 || year > 9999) {
-                throw new IllegalArgumentException("Дата мероприятия для Excel должна быть в диапазоне 1900–9999 годов");
+                throw new IllegalArgumentException("Дата мероприятия должна быть в диапазоне 1900–9999 годов для сохранения в таблицу");
             }
         }
         return snapshot;

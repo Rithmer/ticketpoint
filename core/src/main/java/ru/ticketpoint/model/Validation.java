@@ -25,7 +25,7 @@ public final class Validation {
 
     public static long id(long id) {
         if (id <= 0) {
-            throw new IllegalArgumentException("ID должен быть положительным числом");
+            throw new IllegalArgumentException("Номер записи должен быть положительным числом");
         }
         return id;
     }

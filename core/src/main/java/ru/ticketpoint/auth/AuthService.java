@@ -22,7 +22,7 @@ public final class AuthService {
     public void initialize(AuthConfig config) {
         users.initialize(() -> {
             if (config.password() == null || config.password().isBlank()) {
-                throw new IllegalArgumentException("Первый администратор ещё не создан. Задайте BOOTSTRAP_ADMIN_PASSWORD в .env (8–128 символов)");
+                throw new IllegalArgumentException("Не задан пароль первой учётной записи администратора. Проверьте файл настроек (от 8 до 128 символов).");
             }
             return new JdbcUserRepository.InitialAdmin(login(config.login()),
                     Validation.text(config.name(), "Имя администратора", 120), passwords.hash(config.password()));

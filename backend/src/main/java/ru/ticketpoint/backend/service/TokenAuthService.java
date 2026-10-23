@@ -44,7 +44,7 @@ public class TokenAuthService {
         this.current = current;
         this.audit = audit;
         this.days = days;
-        if (days < 1 || days > 90) throw new IllegalArgumentException("refresh-days: 1..90");
+        if (days < 1 || days > 90) throw new IllegalArgumentException("Срок восстановления сеанса должен быть от 1 до 90 дней.");
     }
 
     @Transactional(noRollbackFor = ApiException.class)

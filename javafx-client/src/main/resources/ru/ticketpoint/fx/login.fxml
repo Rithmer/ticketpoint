@@ -3,7 +3,7 @@
 <?import javafx.scene.layout.*?>
 <StackPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.ticketpoint.fx.LoginController" styleClass="app-root">
     <VBox maxWidth="400" maxHeight="-Infinity" spacing="18" alignment="CENTER_LEFT" styleClass="login-card">
-        <Label text="TicketPoint" styleClass="brand"/>
+        <Label text="Билетная касса" styleClass="brand"/>
         <Label text="Управление билетными бронированиями" styleClass="muted" wrapText="true"/>
         <VBox fx:id="form" spacing="10">
             <Label text="Логин"/>

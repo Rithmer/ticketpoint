@@ -24,7 +24,7 @@ public final class TicketPointApplication extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         this.stage = stage;
-        stage.setTitle("TicketPoint");
+        stage.setTitle("Билетная касса");
         stage.setMinWidth(600);
         stage.setMinHeight(600);
         showLogin();

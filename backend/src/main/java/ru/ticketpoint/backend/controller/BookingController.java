@@ -113,7 +113,7 @@ public class BookingController {
             @RequestParam(defaultValue = "createdAt") String sort,
             @RequestParam(defaultValue = "desc") String direction) {
         return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename=bookings.csv")
+                .header("Content-Disposition", "attachment; filename=bronirovaniya.csv; filename*=UTF-8''%D0%B1%D1%80%D0%BE%D0%BD%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F.csv")
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .body(
                         csv.export(

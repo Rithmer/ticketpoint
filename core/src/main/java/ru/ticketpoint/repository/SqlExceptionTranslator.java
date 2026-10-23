@@ -23,7 +23,7 @@ final class SqlExceptionTranslator {
                     "Не удалось сохранить данные. Проверьте заполнение обязательных полей, "
                             + "длину текста и цену", error);
             case null, default -> new DataAccessException(
-                    operation + ". Проверьте подключение и SQL-схему (SQLState: " + state + ")", error);
+                    operation + ". Не удалось обратиться к базе данных. Проверьте подключение и повторите действие.", error);
         };
     }
 }

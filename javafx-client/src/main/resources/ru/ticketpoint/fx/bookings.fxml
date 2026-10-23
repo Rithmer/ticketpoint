@@ -24,7 +24,7 @@
         <Button fx:id="editButton" text="Редактировать" onAction="#editBooking" disable="true"/>
         <Button text="Обновить" onAction="#refreshBookings"/>
         <Button fx:id="deleteButton" text="Удалить" onAction="#deleteBooking" styleClass="danger" disable="true"/>
-        <Button text="Экспорт Excel" onAction="#exportBookings"/>
+        <Button text="Сохранить таблицу" onAction="#exportBookings"/>
     </FlowPane>
     <Label fx:id="resultCount" text="Показано 0 из 0"/>
     <TableView fx:id="bookingTable" VBox.vgrow="ALWAYS"/>
