@@ -138,6 +138,5 @@ Backend использует JWT-аутентификацию и разгран�
 - SQL-схема: [`db/schema.sql`](db/schema.sql)
 - Миграции backend: [`backend/src/main/resources/db/migration`](backend/src/main/resources/db/migration)
 - OpenAPI UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) после запуска backend
-- Интеграционная проверка backend на временной PostgreSQL: `bash backend/verify-kr3.sh`
 
 Перед запуском интеграционных сценариев с собственной конфигурацией используйте отдельную тестовую базу данных, а не рабочую.
