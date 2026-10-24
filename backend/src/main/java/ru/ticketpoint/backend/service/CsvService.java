@@ -133,7 +133,6 @@ public class CsvService {
                             .trim().toUpperCase(Locale.ROOT);
                     if (code.matches("[A-Z0-9][A-Z0-9-]{0,39}")) codesToFind.add(code);
                 } catch (IllegalArgumentException ignored) {
-                    // The row is reported by the validation pass below.
                 }
             }
             var existing = bookings.findExistingByTicketNumbers(codesToFind).stream()
