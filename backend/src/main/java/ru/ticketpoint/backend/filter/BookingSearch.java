@@ -41,6 +41,10 @@ public final class BookingSearch {
     }
 
     public static Specification<Booking> spec(Filter f) {
+        return spec(f, true);
+    }
+
+    public static Specification<Booking> spec(Filter f, boolean includeCustomerData) {
         return (root, query, cb) -> {
             var predicates = new ArrayList<Predicate>();
             if (f.q() != null && !f.q().isBlank()) {
@@ -55,13 +59,15 @@ public final class BookingSearch {
                                 + "%";
                 var customer = root.join("customer");
                 var event = root.join("event");
-                predicates.add(
-                        cb.or(
-                                cb.like(cb.lower(root.get("ticketNumber")), q, '\\'),
-                                cb.like(cb.lower(customer.get("name")), q, '\\'),
-                                cb.like(cb.lower(event.get("title")), q, '\\'),
-                                cb.like(cb.lower(event.get("venue")), q, '\\'),
-                                cb.like(cb.lower(root.get("description")), q, '\\')));
+                var terms = new ArrayList<Predicate>();
+                terms.add(cb.like(cb.lower(root.get("ticketNumber")), q, '\\'));
+                terms.add(cb.like(cb.lower(event.get("title")), q, '\\'));
+                terms.add(cb.like(cb.lower(event.get("venue")), q, '\\'));
+                if (includeCustomerData) {
+                    terms.add(cb.like(cb.lower(customer.get("name")), q, '\\'));
+                    terms.add(cb.like(cb.lower(root.get("description")), q, '\\'));
+                }
+                predicates.add(cb.or(terms.toArray(Predicate[]::new)));
             }
             if (f.eventId() != null)
                 predicates.add(cb.equal(root.get("event").get("publicId"), f.eventId()));

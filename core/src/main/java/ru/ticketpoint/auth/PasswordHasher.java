@@ -11,16 +11,19 @@ import javax.crypto.spec.PBEKeySpec;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 public final class PasswordHasher {
+    private static final int BCRYPT_MAX_PASSWORD_BYTES = 72;
+
     public static void validate(String password) {
         if (password == null || password.length() < 8 || password.length() > 128 || password.isBlank()) {
             throw new IllegalArgumentException("Пароль: от 8 до 128 символов; не используйте только пробелы");
+        }
+        if (password.getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_PASSWORD_BYTES) {
+            throw new IllegalArgumentException("Пароль слишком длинный для защиты. Используйте не более 72 байт в UTF-8.");
         }
     }
 
     public String hash(String password) {
         validate(password);
-        if (password.getBytes(StandardCharsets.UTF_8).length > 72)
-            throw new IllegalArgumentException("Пароль слишком длинный. Используйте меньше символов.");
         return new BCryptPasswordEncoder(12).encode(password);
     }
 

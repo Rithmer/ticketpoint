@@ -17,4 +17,8 @@ public interface UserAccountRepository
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from UserAccount u where lower(u.login)=lower(:login)")
     Optional<UserAccount> lockByLogin(@Param("login") String login);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from UserAccount u where u.enabled=true and u.role='ADMIN' order by u.id")
+    List<UserAccount> lockEnabledAdmins();
 }

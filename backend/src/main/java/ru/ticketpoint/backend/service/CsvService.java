@@ -71,13 +71,13 @@ public class CsvService {
                          new CSVPrinter(writer, CSVFormat.DEFAULT.builder().setHeader(HEADERS).get())) {
                 for (var b : bookings.export(filter, sort))
                     printer.printRecord(
-                            b.ticketNumber(),
+                            safe(b.ticketNumber()),
                             b.customerId(),
                             b.eventId(),
                             statusName(b.status()),
                             b.vip() ? "Да" : "Нет",
                             safe(b.description()),
-                            String.join(";", new TreeSet<>(b.tags())));
+                            String.join(";", new TreeSet<>(b.tags()).stream().map(CsvService::safe).toList()));
             }
             return writer.toString();
         } catch (IOException ex) {
@@ -87,7 +87,12 @@ public class CsvService {
 
     private static String safe(String value) {
         if (value == null) return "";
-        return value.matches("^[=+@\\-].*") ? "'" + value : value;
+        int first = 0;
+        while (first < value.length()
+                && (Character.isWhitespace(value.charAt(first)) || value.charAt(first) == '\uFEFF')) first++;
+        if (first < value.length() && "=+-@".indexOf(value.charAt(first)) >= 0) return "'" + value;
+        if (!value.isEmpty() && "\t\r\n".indexOf(value.charAt(0)) >= 0) return "'" + value;
+        return value;
     }
 
     public Preview preview(MultipartFile file, String mode) {
@@ -101,15 +106,6 @@ public class CsvService {
         var rows = new ArrayList<Row>();
         var errors = new ArrayList<RowError>();
         var codes = new HashSet<String>();
-        var all =
-                bookings.export(
-                        new BookingSearch.Filter(null, null, null, null, null, null, null, null, null),
-                        Sort.by("ticketNumber"));
-        var existing =
-                all.stream()
-                        .collect(
-                                Collectors.toMap(
-                                        b -> b.ticketNumber().toUpperCase(Locale.ROOT), b -> b));
         try (var reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
              var parser =
                      CSVFormat.DEFAULT
@@ -123,9 +119,27 @@ public class CsvService {
             boolean legacyHeaders = headers.equals(List.of(LEGACY_HEADERS));
             if (!headers.equals(List.of(HEADERS)) && !legacyHeaders)
                 throw ApiException.bad("Проверьте названия столбцов. Нужны: " + String.join(", ", HEADERS));
+            var csvRows = new ArrayList<CSVRecord>();
             for (var record : parser) {
+                if (record.getRecordNumber() + 1 > 5001)
+                    throw ApiException.bad("В таблице должно быть не больше 5000 строк.");
+                csvRows.add(record);
+            }
+            var codesToFind = new HashSet<String>();
+            for (var record : csvRows) {
+                if (record.size() != HEADERS.length) continue;
+                try {
+                    String code = value(record, legacyHeaders, "ticketNumber", "Номер билета")
+                            .trim().toUpperCase(Locale.ROOT);
+                    if (code.matches("[A-Z0-9][A-Z0-9-]{0,39}")) codesToFind.add(code);
+                } catch (IllegalArgumentException ignored) {
+                    // The row is reported by the validation pass below.
+                }
+            }
+            var existing = bookings.findExistingByTicketNumbers(codesToFind).stream()
+                    .collect(Collectors.toMap(b -> b.getTicketNumber().toUpperCase(Locale.ROOT), b -> b));
+            for (var record : csvRows) {
                 long line = record.getRecordNumber() + 1;
-                if (line > 5001) throw ApiException.bad("В таблице должно быть не больше 5000 строк.");
                 try {
                     if (record.size() != HEADERS.length)
                         throw ApiException.bad("Проверьте количество значений в этой строке.");
@@ -153,13 +167,13 @@ public class CsvService {
                                     vip.equalsIgnoreCase("true") || vip.equalsIgnoreCase("да"),
                                     value(record, legacyHeaders, "description", "Описание"),
                                     tags,
-                                    old == null ? null : old.version());
+                                    old == null ? null : old.getVersion());
                     var violations = validator.validate(input);
                     if (!violations.isEmpty())
                         throw ApiException.bad(
                                 "Проверьте заполнение обязательных полей и длину текста в этой строке.");
-                    bookings.validateImport(old == null ? null : old.id(), input);
-                    rows.add(new Row(line, input, old == null ? null : old.id()));
+                    bookings.validateImport(old == null ? null : old.getPublicId(), input);
+                    rows.add(new Row(line, input, old == null ? null : old.getPublicId()));
                 } catch (ApiException | IllegalArgumentException ex) {
                     errors.add(
                             new RowError(

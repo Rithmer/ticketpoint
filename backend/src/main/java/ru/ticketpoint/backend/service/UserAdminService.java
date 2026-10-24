@@ -55,9 +55,9 @@ public class UserAdminService {
         ApiException.version(req.version(), u.getVersion());
         if (id.equals(current.get().getPublicId()) && (!req.enabled() || !"ADMIN".equals(req.role())))
             throw ApiException.bad("Нельзя отключить или понизить собственную учётную запись");
-        if (u.getRole().equals("ADMIN")
+        if (u.getEnabled() && u.getRole().equals("ADMIN")
                 && (!req.enabled() || !req.role().equals("ADMIN"))
-                && users.findAll().stream().filter(x -> x.getEnabled() && x.getRole().equals("ADMIN")).count() <= 1)
+                && users.lockEnabledAdmins().size() <= 1)
             throw ApiException.bad("Нельзя отключить последнего администратора");
         apply(u, req);
         users.saveAndFlush(u);

@@ -145,6 +145,7 @@ async function api(
 function visibility() {
     document.querySelectorAll(".admin").forEach((e) => (e.hidden = !admin()));
     document.querySelectorAll(".writer").forEach((e) => (e.hidden = !write()));
+    document.querySelectorAll(".authenticated").forEach((e) => (e.hidden = !state.tokens));
 }
 
 function signedOut() {

@@ -31,6 +31,8 @@ public enum BookingStatus {
             return "Отменённое бронирование нельзя изменить";
         }
         if (this == NEW && next == PAID) return "Перед отметкой об оплате менеджер должен подтвердить заявку";
+        if (this == CONFIRMED && next == NEW)
+            return "Подтверждённое бронирование нельзя вернуть в статус новой заявки";
         if (this == PAID && next != PAID && next != CANCELLED)
             return "Оплаченное бронирование можно только отменить";
         return null;

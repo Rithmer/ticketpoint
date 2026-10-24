@@ -41,7 +41,7 @@ public class SecurityConfig {
                                                 "/favicon.ico",
                                                 "/actuator/health")
                                         .permitAll()
-                                        .requestMatchers(HttpMethod.GET, "/api/bookings", "/api/bookings/{id}", "/api/bookings/export",
+                                        .requestMatchers(HttpMethod.GET, "/api/bookings", "/api/bookings/{id}",
                                                 "/api/events", "/api/analytics/summary")
                                         .permitAll()
                                         .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/register")

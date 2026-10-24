@@ -17,6 +17,7 @@ import ru.ticketpoint.backend.security.CurrentUser;
 
 @Service
 public class BookingApplicationService {
+    private static final int MAX_EXPORT_ROWS = 10_000;
     private final Clock clock;
     private final BookingRepository bookings;
     private final EventRepository events;
@@ -43,31 +44,36 @@ public class BookingApplicationService {
 
     @Transactional(readOnly = true)
     public Page<Views.BookingView> search(BookingSearch.Filter filter, Pageable page) {
-        return bookings.findAll(scope(filter), page).map(Views::booking);
+        var user = current.optional().orElse(null);
+        return bookings.findAll(scope(filter, user), page).map(b -> Views.booking(b, user == null));
     }
 
     @Transactional(readOnly = true)
     public List<Views.BookingView> export(BookingSearch.Filter filter, Sort sort) {
-        return bookings.findAll(scope(filter), sort).stream().map(Views::booking).toList();
+        var user = current.optional().orElse(null);
+        var page = bookings.findAll(scope(filter, user), PageRequest.of(0, MAX_EXPORT_ROWS + 1, sort));
+        if (page.getNumberOfElements() > MAX_EXPORT_ROWS)
+            throw ApiException.bad("Выгрузка ограничена 10 000 строками. Уточните фильтры и повторите попытку.");
+        return page.getContent().stream().map(b -> Views.booking(b, user == null)).toList();
     }
 
     @Transactional(readOnly = true)
     public Views.BookingView get(UUID id) {
-        return Views.booking(require(id));
+        return Views.booking(require(id), current.optional().isEmpty());
     }
 
     public Booking require(UUID id) {
         var b = bookings.findByPublicId(id).orElseThrow(ApiException::missing);
         var u = current.optional().orElse(null);
+        if (u == null && b.getArchived()) throw ApiException.missing();
         if (u != null && u.getRole().equals("USER") && !Objects.equals(u.getCustomerId(), b.getCustomer().getId()))
             throw ApiException.missing();
         return b;
     }
 
-    private Specification<Booking> scope(
-            BookingSearch.Filter filter) {
-        var u = current.optional().orElse(null);
-        Specification<Booking> spec = BookingSearch.spec(filter);
+    private Specification<Booking> scope(BookingSearch.Filter filter, ru.ticketpoint.backend.domain.UserAccount u) {
+        Specification<Booking> spec = BookingSearch.spec(filter, u != null);
+        if (u == null) spec = spec.and((r, q, cb) -> cb.isFalse(r.get("archived")));
         if (u != null && u.getRole().equals("USER"))
             spec =
                     spec.and(
@@ -76,6 +82,13 @@ public class BookingApplicationService {
                                             ? cb.disjunction()
                                             : cb.equal(r.get("customer").get("id"), u.getCustomerId()));
         return spec;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Booking> findExistingByTicketNumbers(Collection<String> ticketNumbers) {
+        if (ticketNumbers.isEmpty()) return List.of();
+        var normalized = ticketNumbers.stream().map(s -> s.toUpperCase(Locale.ROOT)).toList();
+        return bookings.findByTicketNumbersIgnoreCase(normalized);
     }
 
     @Transactional
@@ -184,7 +197,7 @@ public class BookingApplicationService {
         boolean valid =
                 switch (from) {
                     case NEW -> to == BookingStatus.CONFIRMED || to == BookingStatus.CANCELLED;
-                    case CONFIRMED -> true;
+                    case CONFIRMED -> to == BookingStatus.PAID || to == BookingStatus.CANCELLED;
                     case PAID -> to == BookingStatus.CANCELLED;
                     case CANCELLED -> false;
                 };

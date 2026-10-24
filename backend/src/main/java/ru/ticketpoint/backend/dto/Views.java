@@ -114,18 +114,22 @@ public final class Views {
     }
 
     public static BookingView booking(Booking b) {
+        return booking(b, false);
+    }
+
+    public static BookingView booking(Booking b, boolean publicView) {
         return new BookingView(
                 b.getPublicId(),
                 b.getTicketNumber(),
-                b.getCustomer().getId(),
-                b.getCustomer().getName(),
+                publicView ? null : b.getCustomer().getId(),
+                publicView ? "Покупатель" : b.getCustomer().getName(),
                 b.getEvent().getPublicId(),
                 b.getEvent().getTitle(),
                 b.getStatus(),
                 b.getPrice(),
                 b.getVip(),
-                b.getDescription(),
-                Set.copyOf(b.getTags()),
+                publicView ? null : b.getDescription(),
+                publicView ? Set.of() : Set.copyOf(b.getTags()),
                 PriorityCalculator.calculate(b.getStatus(), b.getPrice(), b.getVip()),
                 b.getArchived(),
                 b.getCreatedAt(),
