@@ -1,14 +1,8 @@
 ### IntelliJ IDEA ###
 .idea/*
-!.idea/dictionaries/
-!.idea/dictionaries/**
 !.idea/inspectionProfiles/
 !.idea/inspectionProfiles/**
-!.idea/scopes/
-!.idea/scopes/**
-!.idea/sqlDataSources.xml
 !.idea/sqldialects.xml
-!.idea/jpa-buddy-datasource.xml
 *.iml
 !backend/backend.iml
 out/
