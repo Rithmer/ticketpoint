@@ -1,7 +1,9 @@
 package ru.ticketpoint.backend.error;
 
+import java.io.Serial;
+
 public class ApiException extends RuntimeException {
-    @java.io.Serial
+    @Serial
     private static final long serialVersionUID = 1L;
     public final int status;
 

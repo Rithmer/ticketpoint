@@ -1,5 +1,6 @@
 package ru.ticketpoint.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
@@ -15,13 +16,13 @@ public final class Requests {
 
     public record Login(
             @NotBlank @Size(max = 40) String login, @NotBlank @Size(max = 128) String password) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public Login {
         }
     }
 
     public record Refresh(@NotBlank @Size(max = 512) String refreshToken) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public Refresh {
         }
     }
@@ -31,7 +32,7 @@ public final class Requests {
             @NotBlank @Size(max = 120) String name,
             @NotBlank @Size(min = 8, max = 128) String password,
             @NotBlank @Size(max = 128) String confirmation) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public Registration {
         }
     }
@@ -39,7 +40,7 @@ public final class Requests {
     public record Password(
             @NotBlank @Size(max = 128) String currentPassword,
             @NotBlank @Size(max = 128) String newPassword) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public Password {
         }
     }
@@ -53,7 +54,7 @@ public final class Requests {
             @Size(max = 1000) String description,
             @Size(max = 20) Set<@NotBlank @Size(max = 50) String> tags,
             Long version) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public BookingInput {
         }
     }
@@ -65,19 +66,19 @@ public final class Requests {
             @NotNull @DecimalMin("0") @DecimalMax("9999999999.99") BigDecimal price,
             boolean active,
             Long version) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public EventInput {
         }
     }
 
     public record CustomerInput(@NotBlank @Size(max = 120) String name) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public CustomerInput {
         }
     }
 
     public record NoteInput(@NotBlank @Size(max = 4000) String body, boolean pinned, Long version) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public NoteInput {
         }
     }
@@ -95,7 +96,7 @@ public final class Requests {
             @NotNull BulkAction action,
             BookingStatus status,
             @Size(max = 50) String tag) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public Bulk {
         }
     }
@@ -106,7 +107,7 @@ public final class Requests {
             @NotBlank @Pattern(regexp = "ADMIN|MANAGER|USER|VIEWER") String role,
             boolean enabled,
             Long version) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public UserInput {
         }
     }
@@ -114,20 +115,20 @@ public final class Requests {
     public record NewUser(
             @NotNull @Valid UserInput user,
             @NotBlank @Size(max = 128) String temporaryPassword) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public NewUser {
         }
     }
 
     public record ResetPassword(@NotBlank @Size(max = 128) String temporaryPassword) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public ResetPassword {
         }
     }
 
     public record ApplyImport(
             @NotNull UUID previewId, @NotBlank @Pattern(regexp = "NEW_ONLY|UPSERT") String mode) {
-        @com.fasterxml.jackson.annotation.JsonCreator
+        @JsonCreator
         public ApplyImport {
         }
     }

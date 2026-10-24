@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import org.jetbrains.annotations.NotNull;
 import ru.ticketpoint.auth.*;
 import ru.ticketpoint.config.ConnectionProvider;
 import ru.ticketpoint.exception.BookingException;
@@ -262,7 +263,7 @@ public final class JdbcUserRepository {
 
     public record InitialAdmin(String login, String name, String hash) {
         @Override
-        public @org.jetbrains.annotations.NotNull String toString() {
+        public @NotNull String toString() {
             return "InitialAdmin[credentials=<hidden>]";
         }
     }

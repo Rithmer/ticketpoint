@@ -1,5 +1,6 @@
 package ru.ticketpoint.backend.config;
 
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -26,7 +27,7 @@ public class BootstrapAdmin implements CommandLineRunner {
 
     @Override
     @Transactional
-    public void run(@org.jspecify.annotations.NonNull String @org.jspecify.annotations.NonNull ... args) {
+    public void run(@NonNull String @NonNull ... args) {
         if (users.count() != 0) return;
         var u = new UserAccount();
         u.setLogin(AuthService.login(login));

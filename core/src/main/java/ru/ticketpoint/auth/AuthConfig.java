@@ -3,6 +3,7 @@ package ru.ticketpoint.auth;
 import java.nio.file.Path;
 import java.util.Map;
 
+import org.jetbrains.annotations.NotNull;
 import ru.ticketpoint.config.EnvironmentFile;
 
 public record AuthConfig(String login, String name, String password) {
@@ -13,7 +14,7 @@ public record AuthConfig(String login, String name, String password) {
     }
 
     @Override
-    public @org.jetbrains.annotations.NotNull String toString() {
+    public @NotNull String toString() {
         return "AuthConfig[credentials=<hidden>]";
     }
 }

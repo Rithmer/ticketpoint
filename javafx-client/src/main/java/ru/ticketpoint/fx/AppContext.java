@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
+import org.jetbrains.annotations.Contract;
 import ru.ticketpoint.auth.*;
 import ru.ticketpoint.config.*;
 import ru.ticketpoint.model.Booking;
@@ -41,7 +42,7 @@ public final class AppContext {
         return services;
     }
 
-    @org.jetbrains.annotations.Contract(pure = true)
+    @Contract(pure = true)
     public FxTaskExecutor getTasks() {
         return tasks;
     }
@@ -51,7 +52,7 @@ public final class AppContext {
         return auth;
     }
 
-    @org.jetbrains.annotations.Contract(pure = true)
+    @Contract(pure = true)
     public AuthService auth() {
         return auth;
     }

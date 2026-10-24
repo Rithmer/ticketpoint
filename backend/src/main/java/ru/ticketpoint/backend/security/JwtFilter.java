@@ -8,6 +8,7 @@ import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.util.*;
 
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,7 +36,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(
-            @org.jspecify.annotations.NonNull HttpServletRequest req, @org.jspecify.annotations.NonNull HttpServletResponse res, @org.jspecify.annotations.NonNull FilterChain chain)
+            @NonNull HttpServletRequest req, @NonNull HttpServletResponse res, @NonNull FilterChain chain)
             throws ServletException, IOException {
         String header = req.getHeader("Authorization");
         if (header == null
