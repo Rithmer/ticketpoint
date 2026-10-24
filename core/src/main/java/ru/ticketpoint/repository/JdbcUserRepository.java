@@ -117,6 +117,18 @@ public final class JdbcUserRepository {
         }
     }
 
+    public boolean passwordMatches(long userId, Predicate<String> passwordMatches) {
+        try (var connection = connections.open();
+             var statement = connection.prepareStatement("SELECT password_hash FROM app_users WHERE id=?")) {
+            statement.setLong(1, userId);
+            try (var row = statement.executeQuery()) {
+                return row.next() && passwordMatches.test(row.getString("password_hash"));
+            }
+        } catch (SQLException error) {
+            throw SqlExceptionTranslator.translate("Не удалось проверить пароль", error);
+        }
+    }
+
     private static void updateAttempts(Connection connection, long id, int failures, Instant lock) throws SQLException {
         try (var statement = connection.prepareStatement("UPDATE app_users SET failed_attempts=?,locked_until=? WHERE id=?")) {
             statement.setInt(1, failures);

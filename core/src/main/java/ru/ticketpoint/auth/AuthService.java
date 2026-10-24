@@ -117,10 +117,10 @@ public final class AuthService {
     public User changePassword(User session, String oldPassword, String newPassword) {
         User current = current(session);
         PasswordHasher.validate(newPassword);
-        if (Objects.equals(oldPassword, newPassword))
-            throw new IllegalArgumentException("Новый пароль должен отличаться от текущего");
         User verified = authenticate(current.login(), oldPassword);
         if (verified.version() != current.version()) throw new AuthException("Сеанс завершён. Войдите заново");
+        if (users.passwordMatches(current.id(), hash -> passwords.matches(newPassword, hash)))
+            throw new IllegalArgumentException("Новый пароль должен отличаться от текущего");
         return users.changePassword(current, passwords.hash(newPassword));
     }
 }
