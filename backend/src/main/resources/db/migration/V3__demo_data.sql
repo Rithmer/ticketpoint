@@ -1,2 +1,0 @@
--- Demo data is loaded explicitly with ./demo.sh.
--- Keep version 3 as a no-op for new databases.

@@ -75,7 +75,7 @@ class BackendApiIntegrationTest {
     @Test
     void jdbcRespectsDisabledEventsAndArchivesInsteadOfDeleting() throws Exception {
         var event = createEvent();
-        bookingInput(event.get("id").asString()); // Create a customer independently of demo data.
+        bookingInput(event.get("id").asString());
         long eventId;
         long customerId;
         try (var c = dataSource.getConnection(); var s = c.createStatement()) {

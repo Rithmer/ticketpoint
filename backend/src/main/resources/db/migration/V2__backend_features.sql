@@ -49,7 +49,6 @@ VALUES ('ADMIN'),
        ('USER');
 ALTER TABLE app_users
     ADD CONSTRAINT app_users_role_fk FOREIGN KEY (role) REFERENCES roles (code);
--- Add UUID API identifiers without replacing the original KR1 numeric keys.
 ALTER TABLE bookings
     ADD COLUMN public_id   UUID      NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     ADD COLUMN version     BIGINT    NOT NULL DEFAULT 0,
@@ -115,7 +114,6 @@ CREATE INDEX idx_bookings_price ON bookings (price_at_booking);
 CREATE INDEX idx_bookings_number_lower ON bookings (lower(ticket_number));
 CREATE INDEX idx_customers_name_lower ON customers (lower(name));
 CREATE INDEX idx_events_title_lower ON events (lower(title));
--- JDBC changes must participate in the same optimistic concurrency protocol.
 CREATE FUNCTION ticketpoint_touch_booking() RETURNS TRIGGER
     LANGUAGE plpgsql AS
 $$
